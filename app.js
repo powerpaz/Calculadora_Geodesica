@@ -1,65 +1,5 @@
-// Geoportal App - MINEDEC
+// Geoportal App - MINEDEC Calculadora Geodésica
 document.addEventListener('DOMContentLoaded', () => {
-  // Inicialización de la configuración
-  const config = { 
-    SUPABASE_URL: window.env?.SUPABASE_URL, 
-    SUPABASE_KEY: window.env?.SUPABASE_KEY 
-  };
-
-  // Limpiar calculadora
-  const btnClearCalculator = document.getElementById('tp-btn-clear-calculator');
-  if (btnClearCalculator) {
-    btnClearCalculator.addEventListener('click', function() {
-      // Limpiar campos de Lat, Lon (DD)
-      document.getElementById('tp-lat').value = '';
-      document.getElementById('tp-lon').value = '';
-
-      // Limpiar campos de DMS
-      document.getElementById('tp-lat-d').value = '';
-      document.getElementById('tp-lat-m').value = '';
-      document.getElementById('tp-lat-s').value = '';
-      document.getElementById('tp-lon-d').value = '';
-      document.getElementById('tp-lon-m').value = '';
-      document.getElementById('tp-lon-s').value = '';
-
-      // Limpiar campos UTM
-      document.getElementById('tp-utm-e-17').value = '';
-      document.getElementById('tp-utm-n-17').value = '';
-      document.getElementById('tp-utm-e-18').value = '';
-      document.getElementById('tp-utm-n-18').value = '';
-
-      // Si hay un mapa definido, podrías limpiar marcadores aquí
-      if (window.map) {
-        window.map.eachLayer((layer) => {
-          if (layer instanceof L.Marker) {
-            window.map.removeLayer(layer);
-          }
-        });
-      }
-    });
-  }
-
-  // Función para cargar GeoJSON
-  function loadGeoJSON(url, map, style = {}) {
-    fetch(url)
-      .then(response => response.json())
-      .then(data => {
-        L.geoJSON(data, {
-          style: style,
-          onEachFeature: (feature, layer) => {
-            if (feature.properties) {
-              layer.bindPopup(() => {
-                return Object.entries(feature.properties)
-                  .map(([key, value]) => `<strong>${key}:</strong> ${value}`)
-                  .join('<br>');
-              });
-            }
-          }
-        }).addTo(map);
-      })
-      .catch(error => console.error('Error loading GeoJSON:', error));
-  }
-
   // Inicializar mapa
   function initMap() {
     const map = L.map('map').setView([-1.831, -78.183], 7);
@@ -84,25 +24,88 @@ document.addEventListener('DOMContentLoaded', () => {
     // Control de capas base
     L.control.layers(basemaps).addTo(map);
 
-    // Cargar GeoJSON
-    loadGeoJSON('GRID_JSON.geojson', map, {
-      color: '#3388ff',
-      weight: 2,
-      opacity: 0.7
-    });
-
-    loadGeoJSON('DA_DPA_CODPOST_JSON.geojson', map, {
-      color: '#ff0000',
-      weight: 1,
-      opacity: 0.5,
-      fillOpacity: 0.2
-    });
-
     // Añadir medidor de distancia
     initMeasure(map);
 
     window.map = map;
     return map;
+  }
+
+  // Limpiar calculadora
+  const btnClearCalculator = document.getElementById('tp-btn-clear-calculator');
+  if (btnClearCalculator) {
+    btnClearCalculator.addEventListener('click', function() {
+      // Limpiar campos de Lat, Lon (DD)
+      document.getElementById('tp-lat').value = '';
+      document.getElementById('tp-lon').value = '';
+
+      // Limpiar campos de DMS
+      document.getElementById('tp-lat-d').value = '';
+      document.getElementById('tp-lat-m').value = '';
+      document.getElementById('tp-lat-s').value = '';
+      document.getElementById('tp-lon-d').value = '';
+      document.getElementById('tp-lon-m').value = '';
+      document.getElementById('tp-lon-s').value = '';
+
+      // Limpiar campos UTM
+      document.getElementById('tp-utm-e-17').value = '';
+      document.getElementById('tp-utm-n-17').value = '';
+      document.getElementById('tp-utm-e-18').value = '';
+      document.getElementById('tp-utm-n-18').value = '';
+
+      // Si hay un mapa definido, limpiar marcadores
+      if (window.map) {
+        window.map.eachLayer((layer) => {
+          if (layer instanceof L.Marker) {
+            window.map.removeLayer(layer);
+          }
+        });
+      }
+    });
+  }
+
+  // Botón Ir: Centrar mapa en las coordenadas
+  const btnCenter = document.getElementById('tp-btn-center');
+  if (btnCenter) {
+    btnCenter.addEventListener('click', function() {
+      const lat = parseFloat(document.getElementById('tp-lat').value);
+      const lon = parseFloat(document.getElementById('tp-lon').value);
+      
+      if (!isNaN(lat) && !isNaN(lon)) {
+        if (window.map) {
+          window.map.setView([lat, lon], 12);
+        }
+      }
+    });
+  }
+
+  // Botón Fijar punto
+  const btnPin = document.getElementById('tp-btn-pin');
+  if (btnPin) {
+    btnPin.addEventListener('click', function() {
+      const lat = parseFloat(document.getElementById('tp-lat').value);
+      const lon = parseFloat(document.getElementById('tp-lon').value);
+      
+      if (!isNaN(lat) && !isNaN(lon) && window.map) {
+        L.marker([lat, lon]).addTo(window.map);
+      }
+    });
+  }
+
+  // Botón Copiar
+  const btnCopy = document.getElementById('tp-btn-copy');
+  if (btnCopy) {
+    btnCopy.addEventListener('click', function() {
+      const lat = document.getElementById('tp-lat').value;
+      const lon = document.getElementById('tp-lon').value;
+      
+      if (lat && lon) {
+        const coordText = `${lat}, ${lon}`;
+        navigator.clipboard.writeText(coordText).then(() => {
+          alert('Coordenadas copiadas: ' + coordText);
+        });
+      }
+    });
   }
 
   // Iniciar aplicación
