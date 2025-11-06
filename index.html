@@ -14,33 +14,14 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-  <!-- PapaParse -->
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-
-  <!-- Supabase v2 UMD -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-
   <!-- Proj4 -->
   <script src="https://cdn.jsdelivr.net/npm/proj4@2.9.2/dist/proj4.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/proj4leaflet@1.0.2/src/proj4leaflet.min.js"></script>
 
-  <!-- GeoJSON Plugins -->
-  <script src="https://cdn.jsdelivr.net/npm/leaflet-geojson-vt@1.0.0/leaflet-geojson-vt.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/geojson-vt@3.2.0/geojson-vt.min.js"></script>
-
   <!-- Estilos -->
-  <link rel="stylesheet" href="styles.css?v=12" />
-
-  <!-- ENV -->
-  <script>
-    window.env = window.env || {
-      SUPABASE_URL: "https://krjwqagkjuzrpxianvnu.supabase.co",
-      SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyandxYWdranV6cnB4aWFudm51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NDY4NjEsImV4cCI6MjA3NDMyMjg2MX0.vdIMVgAciBhAweV4CGjEXq-fuo2xRm0qSssl4JhoErQ"
-    };
-  </script>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- Barra superior -->
   <div class="nav">
     <div class="brand">
       <span class="dot"></span>
@@ -49,64 +30,11 @@
 
     <!-- Logo institucional -->
     <img src="logo.png" alt="Ministerio de Educación, Deporte y Cultura" class="nav-logo" />
-
-    <div class="searchbar">
-      <input id="q-amie" placeholder="Buscar AMIE..." />
-      <input id="q-nombre" placeholder="Buscar nombre..." />
-      <button id="btn-buscar" class="btn primary">Buscar</button>
-      <button id="btn-limpiar" class="btn ghost">Limpiar</button>
-      <button id="btn-toggle-table" class="btn ghost" title="Ocultar/mostrar tabla">Ocultar tabla</button>
-    </div>
   </div>
 
   <div class="stage">
     <!-- MAPA -->
     <div id="map" aria-label="Mapa"></div>
-
-    <!-- Filtros -->
-    <div class="pill filters">
-      <select id="f-provincia"><option>Provincia</option></select>
-      <select id="f-canton" disabled><option>Cantón</option></select>
-      <select id="f-parroquia" disabled><option>Parroquia</option></select>
-      <select id="f-sosten"><option>Sostenimiento</option></select>
-      <select id="f-tipo"><option>Tipo</option></select>
-    </div>
-
-    <!-- Panel Listado (tabla a la derecha) -->
-    <div class="panel right" id="panel-tabla">
-      <div class="panel-head">
-        <strong>Listado</strong>
-        <div class="panel-controls">
-          <button id="btn-toggle-table-inner" class="btn sm ghost" title="Ocultar/mostrar tabla">Ocultar</button>
-          <div class="pager">
-            <button id="pg-prev" class="btn sm ghost">◀</button>
-            <span id="pg-now">1</span>/<span id="pg-total">1</span>
-            <select id="pg-size" class="btn sm">
-              <option>25</option><option>50</option><option>100</option>
-            </select>
-          </div>
-        </div>
-      </div>
-      <div class="table-wrap">
-        <table id="grid">
-          <thead><tr>
-            <th>AMIE</th><th>Nombre</th><th>Tipo</th><th>Sostenimiento</th>
-            <th>Provincia</th><th>Cantón</th><th>Parroquia</th>
-          </tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <div class="panel-foot">
-        <button id="btn-clear-selection" class="btn ghost">Limpiar selección (0)</button>
-      </div>
-    </div>
-
-    <!-- HUD inferior -->
-    <div class="hud">
-      <div class="chip">Estado: <span id="status">Inicializando…</span></div>
-      <div class="chip">Cursor: <span id="cursor">--</span></div>
-      <div class="chip">Selección: <span id="selCount">0</span></div>
-    </div>
 
     <!-- Panel Transformación (calculadora a la izquierda) -->
     <div class="transform-panel left" id="transform-panel">
@@ -183,12 +111,10 @@
     </div>
   </div>
 
-  <!-- App -->
-  <script src="app.js?v=12"></script>
+  <!-- Medidor de Distancia -->
   <script src="medir-distancia.js"></script>
-  
-  <!-- Cruz roja para "Fijar punto" -->
-  <link rel="stylesheet" href="cross-pin.css">
-  <script src="cross-pin.js"></script>
+
+  <!-- Aplicación principal -->
+  <script src="app.js"></script>
 </body>
 </html>
