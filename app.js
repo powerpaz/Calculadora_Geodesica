@@ -221,6 +221,69 @@ if (btnCopy) {
     }
   });
 }
+  // Función para cargar GeoJSON
+function loadGeoJSON(url, map, style = {}) {
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      L.geoJSON(data, {
+        style: style,
+        onEachFeature: (feature, layer) => {
+          if (feature.properties) {
+            let popupContent = Object.entries(feature.properties)
+              .map(([key, value]) => `<strong>${key}:</strong> ${value}`)
+              .join('<br>');
+            layer.bindPopup(popupContent);
+          }
+        }
+      }).addTo(map);
+    })
+    .catch(error => console.error('Error loading GeoJSON:', error));
+}
+
+// Modificar la función initMap()
+function initMap() {
+  const map = L.map('map').setView([-1.831, -78.183], 7);
+  
+  const basemaps = {
+    osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+      attribution: '© OpenStreetMap contributors' 
+    }),
+    esriSat: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles © Esri'
+    }),
+    esriStreet: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles © Esri'
+    }),
+    carto: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© OpenStreetMap contributors, © CARTO'
+    })
+  };
+
+  basemaps.osm.addTo(map);
+
+  // Control de capas base
+  L.control.layers(basemaps).addTo(map);
+
+  // Cargar GeoJSON
+  loadGeoJSON('GRID_JSON.geojson', map, {
+    color: '#3388ff',
+    weight: 2,
+    fillOpacity: 0.2
+  });
+
+  loadGeoJSON('provincias_simplificado.geojson', map, {
+    color: '#ff0000',
+    weight: 1,
+    fillOpacity: 0.1
+  });
+
+  // Añadir medidor de distancia
+  initMeasure(map);
+
+  window.map = map;
+  return map;
+}
   // Iniciar aplicación
   initMap();
 });
