@@ -1,5 +1,6 @@
 (function () {
-  let currentPin = null; // Guarda referencia al pin actual
+  // Variable global para mantener el pin actual
+  if (!window.currentFixedPin) window.currentFixedPin = null;
 
   function whenReady(cb){
     if (document.readyState==='complete'||document.readyState==='interactive') cb();
@@ -14,56 +15,67 @@
   }
 
   whenReady(function(){
-    const btn=document.getElementById('tp-btn-pin');
-    if(!btn) return;
+    // Esperar a que el mapa esté listo
+    const checkMap = setInterval(function(){
+      const map = getMap();
+      if (!map || typeof L === 'undefined') return;
 
-    // Cruz roja más grande y visible con círculo de fondo
-    const crossIcon=L.divIcon({
-      className:'cross-pin',
-      html:`<div class="cross-pin-container">
-              <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'
-                   width='32' height='32' stroke='#ff3b3b' stroke-width='2.5'
-                   fill='none' stroke-linecap='round' stroke-linejoin='round'>
-                <circle cx='12' cy='12' r='10' fill='white' opacity='0.9' stroke='#ff3b3b' stroke-width='2'/>
-                <path d='M6 12h12M12 6v12' stroke-width='3'/>
-              </svg>
-            </div>`,
-      iconSize:[32,32],
-      iconAnchor:[16,16]
-    });
+      clearInterval(checkMap);
+      const btn = document.getElementById('tp-btn-pin');
+      if (!btn) return;
 
-    btn.addEventListener('click', function(e){
-      const map=getMap();
-      if(!map||typeof L==='undefined') return;
-      e.preventDefault();
-      e.stopImmediatePropagation();
+      // Cruz roja más grande y visible con círculo de fondo
+      const crossIcon = L.divIcon({
+        className: 'cross-pin',
+        html: `
+          <div style="position:relative;width:32px;height:32px;display:flex;align-items:center;justify-content:center;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+              <circle cx="16" cy="16" r="14" fill="white" stroke="#ff3b3b" stroke-width="2.5" opacity="0.95"/>
+              <line x1="16" y1="6" x2="16" y2="26" stroke="#ff3b3b" stroke-width="3" stroke-linecap="round"/>
+              <line x1="6" y1="16" x2="26" y2="16" stroke="#ff3b3b" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+          </div>
+        `,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+      });
 
-      const lat=parseFloat(readValById('tp-lat'));
-      const lon=parseFloat(readValById('tp-lon'));
+      btn.addEventListener('click', function(e){
+        e.preventDefault();
+        e.stopPropagation();
 
-      if(!Number.isFinite(lat)||!Number.isFinite(lon)) {
-        alert('Por favor, ingresa coordenadas válidas antes de fijar el punto.');
-        return;
-      }
+        const lat = parseFloat(readValById('tp-lat'));
+        const lon = parseFloat(readValById('tp-lon'));
 
-      // Remover pin anterior si existe
-      if(currentPin) {
-        map.removeLayer(currentPin);
-      }
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+          alert('Por favor, ingresa coordenadas válidas antes de fijar el punto.');
+          return;
+        }
 
-      // Crear nuevo pin y guardarlo
-      currentPin = L.marker([lat, lon], {icon: crossIcon}).addTo(map);
+        // Remover pin anterior si existe
+        if (window.currentFixedPin) {
+          map.removeLayer(window.currentFixedPin);
+        }
 
-      // Agregar popup con las coordenadas
-      currentPin.bindPopup(`
-        <strong>📍 Punto fijado</strong><br/>
-        Lat: ${lat.toFixed(6)}<br/>
-        Lon: ${lon.toFixed(6)}
-      `).openPopup();
+        // Crear nuevo pin y guardarlo
+        window.currentFixedPin = L.marker([lat, lon], {icon: crossIcon}).addTo(map);
 
-      // Centrar mapa en el punto
-      map.setView([lat, lon], map.getZoom());
+        // Agregar popup con las coordenadas
+        window.currentFixedPin.bindPopup(`
+          <div style="font-family:system-ui;padding:4px;">
+            <strong style="color:#ff3b3b;">📍 Punto fijado</strong><br/>
+            <small>Lat: ${lat.toFixed(6)}<br/>
+            Lon: ${lon.toFixed(6)}</small>
+          </div>
+        `).openPopup();
 
-    }, true);
+        // Centrar mapa en el punto
+        map.setView([lat, lon], Math.max(map.getZoom(), 13));
+
+        // Actualizar estado
+        const statusEl = document.getElementById('status');
+        if (statusEl) statusEl.textContent = 'Punto fijado';
+      });
+    }, 100);
   });
 })();

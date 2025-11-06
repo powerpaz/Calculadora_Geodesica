@@ -391,6 +391,50 @@ function setupTransformPanel() {
     }
   });
 
+  // Botón "Ir" para UTM 17S
+  $("#tp-btn-go-utm-17").addEventListener("click", () => {
+    const e = parseFloat($("#tp-utm-e-17").value);
+    const n = parseFloat($("#tp-utm-n-17").value);
+    if (isFinite(e) && isFinite(n)) {
+      try {
+        const [lon, lat] = proj4(EPSG32717, "EPSG:4326", [e, n]);
+        $("#tp-lat").value = lat.toFixed(6);
+        $("#tp-lon").value = lon.toFixed(6);
+        ddToDMS();
+        ddToUTM();
+        map.setView([lat, lon], 15);
+        setStatus(`UTM 17S → Mapa centrado en ${lat.toFixed(6)}, ${lon.toFixed(6)}`);
+      } catch (err) {
+        setStatus("Error en conversión UTM 17S");
+        console.error(err);
+      }
+    } else {
+      setStatus("Coordenadas UTM 17S inválidas");
+    }
+  });
+
+  // Botón "Ir" para UTM 18S
+  $("#tp-btn-go-utm-18").addEventListener("click", () => {
+    const e = parseFloat($("#tp-utm-e-18").value);
+    const n = parseFloat($("#tp-utm-n-18").value);
+    if (isFinite(e) && isFinite(n)) {
+      try {
+        const [lon, lat] = proj4(EPSG32718, "EPSG:4326", [e, n]);
+        $("#tp-lat").value = lat.toFixed(6);
+        $("#tp-lon").value = lon.toFixed(6);
+        ddToDMS();
+        ddToUTM();
+        map.setView([lat, lon], 15);
+        setStatus(`UTM 18S → Mapa centrado en ${lat.toFixed(6)}, ${lon.toFixed(6)}`);
+      } catch (err) {
+        setStatus("Error en conversión UTM 18S");
+        console.error(err);
+      }
+    } else {
+      setStatus("Coordenadas UTM 18S inválidas");
+    }
+  });
+
   // El botón "Fijar punto" se maneja en cross-pin.js
 
   // Botón "Copiar" - copia todas las coordenadas al portapapeles
@@ -455,35 +499,63 @@ function setupTransformPanel() {
 
   // Conversión UTM 17S → DD
   function utm17ToDD() {
-    const e = parseFloat($("#tp-utm-e-17").value),
-          n = parseFloat($("#tp-utm-n-17").value);
+    const e = parseFloat($("#tp-utm-e-17").value);
+    const n = parseFloat($("#tp-utm-n-17").value);
+
+    // Solo convertir si ambos valores son válidos
     if (!isFinite(e) || !isFinite(n)) return;
+    if (e === 0 && n === 0) return; // Evitar conversión de 0,0
 
     try {
       const [lon, lat] = proj4(EPSG32717, "EPSG:4326", [e, n]);
+
+      // Validar que las coordenadas resultantes sean razonables para Ecuador
+      if (lat < -5 || lat > 2 || lon < -82 || lon > -75) {
+        console.warn("Coordenadas fuera del rango de Ecuador");
+        return;
+      }
+
       $("#tp-lat").value = lat.toFixed(6);
       $("#tp-lon").value = lon.toFixed(6);
       ddToDMS();
-      ddToUTM(); // Actualiza también zona 18
-    } catch (e) {
-      console.error("Error en conversión UTM→DD:", e);
+
+      // Actualizar zona 18 sin crear loop infinito
+      const p18 = proj4("EPSG:4326", EPSG32718, [lon, lat]);
+      $("#tp-utm-e-18").value = p18[0].toFixed(2);
+      $("#tp-utm-n-18").value = p18[1].toFixed(2);
+    } catch (err) {
+      console.error("Error en conversión UTM 17S→DD:", err);
     }
   }
 
   // Conversión UTM 18S → DD
   function utm18ToDD() {
-    const e = parseFloat($("#tp-utm-e-18").value),
-          n = parseFloat($("#tp-utm-n-18").value);
+    const e = parseFloat($("#tp-utm-e-18").value);
+    const n = parseFloat($("#tp-utm-n-18").value);
+
+    // Solo convertir si ambos valores son válidos
     if (!isFinite(e) || !isFinite(n)) return;
+    if (e === 0 && n === 0) return; // Evitar conversión de 0,0
 
     try {
       const [lon, lat] = proj4(EPSG32718, "EPSG:4326", [e, n]);
+
+      // Validar que las coordenadas resultantes sean razonables para Ecuador
+      if (lat < -5 || lat > 2 || lon < -82 || lon > -75) {
+        console.warn("Coordenadas fuera del rango de Ecuador");
+        return;
+      }
+
       $("#tp-lat").value = lat.toFixed(6);
       $("#tp-lon").value = lon.toFixed(6);
       ddToDMS();
-      ddToUTM(); // Actualiza también zona 17
-    } catch (e) {
-      console.error("Error en conversión UTM→DD:", e);
+
+      // Actualizar zona 17 sin crear loop infinito
+      const p17 = proj4("EPSG:4326", EPSG32717, [lon, lat]);
+      $("#tp-utm-e-17").value = p17[0].toFixed(2);
+      $("#tp-utm-n-17").value = p17[1].toFixed(2);
+    } catch (err) {
+      console.error("Error en conversión UTM 18S→DD:", err);
     }
   }
 
