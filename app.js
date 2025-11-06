@@ -1,5 +1,24 @@
 // Geoportal App - MINEDEC Calculadora Geodésica
 document.addEventListener('DOMContentLoaded', () => {
+  // Definir proyecciones para conversión UTM
+  const utm17S = '+proj=utm +zone=17 +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs';
+  const wgs84 = '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs';
+
+  // Convertir coordenadas UTM a Lat/Lon
+  function utmToLatLon(easting, northing, zone = 17, hemisphere = 'S') {
+    const utmProj = `+proj=utm +zone=${zone} ${hemisphere === 'S' ? '+south' : ''} +ellps=WGS84 +datum=WGS84 +units=m +no_defs`;
+    try {
+      const coords = proj4(utmProj, wgs84, [parseFloat(easting), parseFloat(northing)]);
+      return { 
+        lon: coords[0], 
+        lat: coords[1] 
+      };
+    } catch (error) {
+      console.error('Error en conversión UTM:', error);
+      return null;
+    }
+  }
+
   // Inicializar mapa
   function initMap() {
     const map = L.map('map').setView([-1.831, -78.183], 7);
@@ -68,13 +87,39 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnCenter = document.getElementById('tp-btn-center');
   if (btnCenter) {
     btnCenter.addEventListener('click', function() {
-      const lat = parseFloat(document.getElementById('tp-lat').value);
-      const lon = parseFloat(document.getElementById('tp-lon').value);
+      let lat, lon;
+
+      // Primero intentar con coordenadas DD
+      lat = parseFloat(document.getElementById('tp-lat').value);
+      lon = parseFloat(document.getElementById('tp-lon').value);
+
+      // Si no hay coordenadas DD, intentar con UTM
+      if (isNaN(lat) || isNaN(lon)) {
+        const utmEasting = document.getElementById('tp-utm-e-17').value;
+        const utmNorthing = document.getElementById('tp-utm-n-17').value;
+        
+        if (utmEasting && utmNorthing) {
+          const utmCoords = utmToLatLon(utmEasting, utmNorthing);
+          if (utmCoords) {
+            lat = utmCoords.lat;
+            lon = utmCoords.lon;
+            
+            // Actualizar campos de coordenadas DD
+            document.getElementById('tp-lat').value = lat.toFixed(6);
+            document.getElementById('tp-lon').value = lon.toFixed(6);
+          }
+        }
+      }
       
       if (!isNaN(lat) && !isNaN(lon)) {
         if (window.map) {
           window.map.setView([lat, lon], 12);
+          
+          // Añadir un marcador
+          L.marker([lat, lon]).addTo(window.map);
         }
+      } else {
+        alert('Por favor, ingrese coordenadas válidas');
       }
     });
   }
@@ -83,11 +128,34 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnPin = document.getElementById('tp-btn-pin');
   if (btnPin) {
     btnPin.addEventListener('click', function() {
-      const lat = parseFloat(document.getElementById('tp-lat').value);
-      const lon = parseFloat(document.getElementById('tp-lon').value);
+      let lat, lon;
+
+      // Primero intentar con coordenadas DD
+      lat = parseFloat(document.getElementById('tp-lat').value);
+      lon = parseFloat(document.getElementById('tp-lon').value);
+
+      // Si no hay coordenadas DD, intentar con UTM
+      if (isNaN(lat) || isNaN(lon)) {
+        const utmEasting = document.getElementById('tp-utm-e-17').value;
+        const utmNorthing = document.getElementById('tp-utm-n-17').value;
+        
+        if (utmEasting && utmNorthing) {
+          const utmCoords = utmToLatLon(utmEasting, utmNorthing);
+          if (utmCoords) {
+            lat = utmCoords.lat;
+            lon = utmCoords.lon;
+            
+            // Actualizar campos de coordenadas DD
+            document.getElementById('tp-lat').value = lat.toFixed(6);
+            document.getElementById('tp-lon').value = lon.toFixed(6);
+          }
+        }
+      }
       
       if (!isNaN(lat) && !isNaN(lon) && window.map) {
         L.marker([lat, lon]).addTo(window.map);
+      } else {
+        alert('Por favor, ingrese coordenadas válidas');
       }
     });
   }
@@ -96,14 +164,37 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnCopy = document.getElementById('tp-btn-copy');
   if (btnCopy) {
     btnCopy.addEventListener('click', function() {
-      const lat = document.getElementById('tp-lat').value;
-      const lon = document.getElementById('tp-lon').value;
+      let lat, lon;
+
+      // Primero intentar con coordenadas DD
+      lat = parseFloat(document.getElementById('tp-lat').value);
+      lon = parseFloat(document.getElementById('tp-lon').value);
+
+      // Si no hay coordenadas DD, intentar con UTM
+      if (isNaN(lat) || isNaN(lon)) {
+        const utmEasting = document.getElementById('tp-utm-e-17').value;
+        const utmNorthing = document.getElementById('tp-utm-n-17').value;
+        
+        if (utmEasting && utmNorthing) {
+          const utmCoords = utmToLatLon(utmEasting, utmNorthing);
+          if (utmCoords) {
+            lat = utmCoords.lat;
+            lon = utmCoords.lon;
+            
+            // Actualizar campos de coordenadas DD
+            document.getElementById('tp-lat').value = lat.toFixed(6);
+            document.getElementById('tp-lon').value = lon.toFixed(6);
+          }
+        }
+      }
       
       if (lat && lon) {
-        const coordText = `${lat}, ${lon}`;
+        const coordText = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
         navigator.clipboard.writeText(coordText).then(() => {
           alert('Coordenadas copiadas: ' + coordText);
         });
+      } else {
+        alert('Por favor, ingrese coordenadas válidas');
       }
     });
   }
