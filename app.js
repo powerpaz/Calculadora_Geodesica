@@ -453,6 +453,37 @@ function setupTransformPanel() {
     }
   });
 
+  // Botón "Limpiar" - borra todos los campos de la calculadora
+  $("#tp-btn-clear").addEventListener("click", () => {
+    // Limpiar campos DD (Lat/Lon)
+    $("#tp-lat").value = "";
+    $("#tp-lon").value = "";
+
+    // Limpiar campos DMS
+    $("#tp-lat-d").value = "";
+    $("#tp-lat-m").value = "";
+    $("#tp-lat-s").value = "";
+    $("#tp-lon-d").value = "";
+    $("#tp-lon-m").value = "";
+    $("#tp-lon-s").value = "";
+
+    // Limpiar campos UTM 17S
+    $("#tp-utm-e-17").value = "";
+    $("#tp-utm-n-17").value = "";
+
+    // Limpiar campos UTM 18S
+    $("#tp-utm-e-18").value = "";
+    $("#tp-utm-n-18").value = "";
+
+    // Remover pin fijo si existe
+    if (window.currentFixedPin && map) {
+      map.removeLayer(window.currentFixedPin);
+      window.currentFixedPin = null;
+    }
+
+    setStatus("Calculadora limpiada - lista para nuevos datos");
+  });
+
   // Conversión DD → UTM
   function ddToUTM() {
     const lat = parseFloat($("#tp-lat").value),
