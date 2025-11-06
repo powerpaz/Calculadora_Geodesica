@@ -284,6 +284,59 @@ function initMap() {
   window.map = map;
   return map;
 }
+
+  // Función para cargar GeoJSON
+function loadGeoJSON(url, map, style = {}) {
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      L.geoJSON(data, {
+        style: style,
+        onEachFeature: (feature, layer) => {
+          if (feature.properties) {
+            let popupContent = Object.entries(feature.properties)
+              .map(([key, value]) => `<strong>${key}:</strong> ${value}`)
+              .join('<br>');
+            layer.bindPopup(popupContent);
+          }
+        }
+      }).addTo(map);
+    })
+    .catch(error => console.error('Error loading GeoJSON:', error));
+}
+
+// Inicializar mapa
+function initMap() {
+  const map = L.map('map').setView([-1.831, -78.183], 7);
+  
+  const basemaps = {
+    // [código de basemaps que ya tenías]
+  };
+
+  basemaps.osm.addTo(map);
+
+  // Control de capas base
+  L.control.layers(basemaps).addTo(map);
+
+  // Cargar GeoJSON
+  loadGeoJSON('GRID_JSON.geojson', map, {
+    color: '#3388ff',
+    weight: 2,
+    fillOpacity: 0.2
+  });
+
+  loadGeoJSON('provincias_simplificado.geojson', map, {
+    color: '#ff0000',
+    weight: 1,
+    fillOpacity: 0.1
+  });
+
+  // Añadir medidor de distancia
+  initMeasure(map);
+
+  window.map = map;
+  return map;
+}
   // Iniciar aplicación
   initMap();
 });
