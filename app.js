@@ -4,6 +4,26 @@ document.addEventListener('DOMContentLoaded', () => {
   const utm18S = '+proj=utm +zone=18 +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs';
   const wgs84 = '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs';
 
+  // Función para cargar GeoJSON
+  function loadGeoJSON(url, map, style = {}) {
+    fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        L.geoJSON(data, {
+          style: style,
+          onEachFeature: (feature, layer) => {
+            if (feature.properties) {
+              let popupContent = Object.entries(feature.properties)
+                .map(([key, value]) => `<strong>${key}:</strong> ${value}`)
+                .join('<br>');
+              layer.bindPopup(popupContent);
+            }
+          }
+        }).addTo(map);
+      })
+      .catch(error => console.error('Error loading GeoJSON:', error));
+  }
+
   // Convertir coordenadas UTM a Lat/Lon
   function utmToLatLon(easting, northing, zone = 17, hemisphere = 'S') {
     const utmProj = `+proj=utm +zone=${zone} ${hemisphere === 'S' ? '+south' : ''} +ellps=WGS84 +datum=WGS84 +units=m +no_defs`;
@@ -34,6 +54,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Convertir Decimal a DMS
+  function decimalToDMS(decimal) {
+    const degrees = Math.floor(Math.abs(decimal));
+    const minutes = Math.floor((Math.abs(decimal) - degrees) * 60);
+    const seconds = ((Math.abs(decimal) - degrees - minutes / 60) * 3600).toFixed(2);
+    const direction = decimal >= 0 ? (decimal >= 0 ? 'N' : 'S') : (decimal < 0 ? 'S' : 'N');
+    return { degrees, minutes, seconds, direction };
+  }
+
   // Inicializar mapa
   function initMap() {
     const map = L.map('map').setView([-1.831, -78.183], 7);
@@ -57,6 +86,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Control de capas base
     L.control.layers(basemaps).addTo(map);
+
+    // Cargar GeoJSON
+    loadGeoJSON('GRID_JSON.geojson', map, {
+      color: '#3388ff',
+      weight: 2,
+      fillOpacity: 0.2
+    });
+
+    loadGeoJSON('provincias_simplificado.geojson', map, {
+      color: '#ff0000',
+      weight: 1,
+      fillOpacity: 0.1
+    });
 
     // Añadir medidor de distancia
     initMeasure(map);
@@ -141,6 +183,16 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('tp-lat').value = lat.toFixed(6);
       document.getElementById('tp-lon').value = lon.toFixed(6);
 
+      // Actualizar DMS
+      const latDMS = decimalToDMS(lat);
+      const lonDMS = decimalToDMS(lon);
+      document.getElementById('tp-lat-d').value = latDMS.degrees;
+      document.getElementById('tp-lat-m').value = latDMS.minutes;
+      document.getElementById('tp-lat-s').value = latDMS.seconds;
+      document.getElementById('tp-lon-d').value = lonDMS.degrees;
+      document.getElementById('tp-lon-m').value = lonDMS.minutes;
+      document.getElementById('tp-lon-s').value = lonDMS.seconds;
+
       // Actualizar UTM 17S
       const utmCoords17 = latLonToUTM(lat, lon, 17);
       if (utmCoords17) {
@@ -190,153 +242,44 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
   // Botón Copiar
-const btnCopy = document.getElementById('tp-btn-copy');
-if (btnCopy) {
-  btnCopy.addEventListener('click', function() {
-    const coords = getCoordinates();
-    
-    if (coords) {
-      // Coordenadas en Grados Decimales
-      const ddCoords = `Grados Decimales: ${coords.lat.toFixed(6)}, ${coords.lon.toFixed(6)}`;
+  const btnCopy = document.getElementById('tp-btn-copy');
+  if (btnCopy) {
+    btnCopy.addEventListener('click', function() {
+      const coords = getCoordinates();
       
-      // Coordenadas UTM 17S
-      const utm17Easting = document.getElementById('tp-utm-e-17').value;
-      const utm17Northing = document.getElementById('tp-utm-n-17').value;
-      const utm17Coords = `UTM 17S: ${utm17Easting}, ${utm17Northing}`;
-      
-      // Coordenadas UTM 18S
-      const utm18Easting = document.getElementById('tp-utm-e-18').value;
-      const utm18Northing = document.getElementById('tp-utm-n-18').value;
-      const utm18Coords = `UTM 18S: ${utm18Easting}, ${utm18Northing}`;
-      
-      // Texto completo para copiar
-      const fullCoordsText = `${ddCoords}\n${utm17Coords}\n${utm18Coords}`;
-      
-      navigator.clipboard.writeText(fullCoordsText).then(() => {
-        alert('Coordenadas copiadas:\n' + fullCoordsText);
-      });
-    } else {
-      alert('Por favor, ingrese coordenadas válidas');
-    }
-  });
-}
-  // Función para cargar GeoJSON
-function loadGeoJSON(url, map, style = {}) {
-  fetch(url)
-    .then(response => response.json())
-    .then(data => {
-      L.geoJSON(data, {
-        style: style,
-        onEachFeature: (feature, layer) => {
-          if (feature.properties) {
-            let popupContent = Object.entries(feature.properties)
-              .map(([key, value]) => `<strong>${key}:</strong> ${value}`)
-              .join('<br>');
-            layer.bindPopup(popupContent);
-          }
-        }
-      }).addTo(map);
-    })
-    .catch(error => console.error('Error loading GeoJSON:', error));
-}
+      if (coords) {
+        // Coordenadas en Grados Decimales
+        const ddCoords = `Grados Decimales: ${coords.lat.toFixed(6)}, ${coords.lon.toFixed(6)}`;
+        
+        // Coordenadas en DMS
+        const latDMS = decimalToDMS(coords.lat);
+        const lonDMS = decimalToDMS(coords.lon);
+        const dmsCoords = `DMS: ${latDMS.degrees}° ${latDMS.minutes}' ${latDMS.seconds}" ${latDMS.direction}, ${lonDMS.degrees}° ${lonDMS.minutes}' ${lonDMS.seconds}" ${lonDMS.direction}`;
+        
+        // Coordenadas UTM 17S
+        const utm17Easting = document.getElementById('tp-utm-e-17').value;
+        const utm17Northing = document.getElementById('tp-utm-n-17').value;
+        const utm17Coords = `UTM 17S: ${utm17Easting}, ${utm17Northing}`;
+        
+        // Coordenadas UTM 18S
+        const utm18Easting = document.getElementById('tp-utm-e-18').value;
+        const utm18Northing = document.getElementById('tp-utm-n-18').value;
+        const utm18Coords = `UTM 18S: ${utm18Easting}, ${utm18Northing}`;
+        
+        // Texto completo para copiar
+        const fullCoordsText = `${ddCoords}\n${dmsCoords}\n${utm17Coords}\n${utm18Coords}`;
+        
+        navigator.clipboard.writeText(fullCoordsText).then(() => {
+          alert('Coordenadas copiadas:\n' + fullCoordsText);
+        });
+      } else {
+        alert('Por favor, ingrese coordenadas válidas');
+      }
+    });
+  }
 
-// Modificar la función initMap()
-function initMap() {
-  const map = L.map('map').setView([-1.831, -78.183], 7);
-  
-  const basemaps = {
-    osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
-      attribution: '© OpenStreetMap contributors' 
-    }),
-    esriSat: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Tiles © Esri'
-    }),
-    esriStreet: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Tiles © Esri'
-    }),
-    carto: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '© OpenStreetMap contributors, © CARTO'
-    })
-  };
-
-  basemaps.osm.addTo(map);
-
-  // Control de capas base
-  L.control.layers(basemaps).addTo(map);
-
-  // Cargar GeoJSON
-  loadGeoJSON('GRID_JSON.geojson', map, {
-    color: '#3388ff',
-    weight: 2,
-    fillOpacity: 0.2
-  });
-
-  loadGeoJSON('provincias_simplificado.geojson', map, {
-    color: '#ff0000',
-    weight: 1,
-    fillOpacity: 0.1
-  });
-
-  // Añadir medidor de distancia
-  initMeasure(map);
-
-  window.map = map;
-  return map;
-}
-
-  // Función para cargar GeoJSON
-function loadGeoJSON(url, map, style = {}) {
-  fetch(url)
-    .then(response => response.json())
-    .then(data => {
-      L.geoJSON(data, {
-        style: style,
-        onEachFeature: (feature, layer) => {
-          if (feature.properties) {
-            let popupContent = Object.entries(feature.properties)
-              .map(([key, value]) => `<strong>${key}:</strong> ${value}`)
-              .join('<br>');
-            layer.bindPopup(popupContent);
-          }
-        }
-      }).addTo(map);
-    })
-    .catch(error => console.error('Error loading GeoJSON:', error));
-}
-
-// Inicializar mapa
-function initMap() {
-  const map = L.map('map').setView([-1.831, -78.183], 7);
-  
-  const basemaps = {
-    // [código de basemaps que ya tenías]
-  };
-
-  basemaps.osm.addTo(map);
-
-  // Control de capas base
-  L.control.layers(basemaps).addTo(map);
-
-  // Cargar GeoJSON
-  loadGeoJSON('GRID_JSON.geojson', map, {
-    color: '#3388ff',
-    weight: 2,
-    fillOpacity: 0.2
-  });
-
-  loadGeoJSON('provincias_simplificado.geojson', map, {
-    color: '#ff0000',
-    weight: 1,
-    fillOpacity: 0.1
-  });
-
-  // Añadir medidor de distancia
-  initMeasure(map);
-
-  window.map = map;
-  return map;
-}
   // Iniciar aplicación
   initMap();
 });
