@@ -1,7 +1,7 @@
-// Geoportal App - MINEDEC Calculadora Geodésica
 document.addEventListener('DOMContentLoaded', () => {
   // Definir proyecciones para conversión UTM
   const utm17S = '+proj=utm +zone=17 +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs';
+  const utm18S = '+proj=utm +zone=18 +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs';
   const wgs84 = '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs';
 
   // Convertir coordenadas UTM a Lat/Lon
@@ -83,40 +83,71 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Función común para obtener coordenadas
+  function getCoordinates() {
+    let lat, lon;
+
+    // Primero intentar con coordenadas DD
+    lat = parseFloat(document.getElementById('tp-lat').value);
+    lon = parseFloat(document.getElementById('tp-lon').value);
+
+    // Si no hay coordenadas DD, intentar con UTM 17S
+    if (isNaN(lat) || isNaN(lon)) {
+      const utmEasting17 = document.getElementById('tp-utm-e-17').value;
+      const utmNorthing17 = document.getElementById('tp-utm-n-17').value;
+      
+      if (utmEasting17 && utmNorthing17) {
+        const utmCoords = utmToLatLon(utmEasting17, utmNorthing17, 17);
+        if (utmCoords) {
+          lat = utmCoords.lat;
+          lon = utmCoords.lon;
+          
+          // Actualizar campos de coordenadas DD
+          document.getElementById('tp-lat').value = lat.toFixed(6);
+          document.getElementById('tp-lon').value = lon.toFixed(6);
+          
+          return { lat, lon };
+        }
+      }
+    }
+
+    // Si no hay coordenadas DD, intentar con UTM 18S
+    if (isNaN(lat) || isNaN(lon)) {
+      const utmEasting18 = document.getElementById('tp-utm-e-18').value;
+      const utmNorthing18 = document.getElementById('tp-utm-n-18').value;
+      
+      if (utmEasting18 && utmNorthing18) {
+        const utmCoords = utmToLatLon(utmEasting18, utmNorthing18, 18);
+        if (utmCoords) {
+          lat = utmCoords.lat;
+          lon = utmCoords.lon;
+          
+          // Actualizar campos de coordenadas DD
+          document.getElementById('tp-lat').value = lat.toFixed(6);
+          document.getElementById('tp-lon').value = lon.toFixed(6);
+          
+          return { lat, lon };
+        }
+      }
+    }
+
+    // Retornar coordenadas si están definidas
+    if (!isNaN(lat) && !isNaN(lon)) {
+      return { lat, lon };
+    }
+
+    return null;
+  }
+
   // Botón Ir: Centrar mapa en las coordenadas
   const btnCenter = document.getElementById('tp-btn-center');
   if (btnCenter) {
     btnCenter.addEventListener('click', function() {
-      let lat, lon;
-
-      // Primero intentar con coordenadas DD
-      lat = parseFloat(document.getElementById('tp-lat').value);
-      lon = parseFloat(document.getElementById('tp-lon').value);
-
-      // Si no hay coordenadas DD, intentar con UTM
-      if (isNaN(lat) || isNaN(lon)) {
-        const utmEasting = document.getElementById('tp-utm-e-17').value;
-        const utmNorthing = document.getElementById('tp-utm-n-17').value;
-        
-        if (utmEasting && utmNorthing) {
-          const utmCoords = utmToLatLon(utmEasting, utmNorthing);
-          if (utmCoords) {
-            lat = utmCoords.lat;
-            lon = utmCoords.lon;
-            
-            // Actualizar campos de coordenadas DD
-            document.getElementById('tp-lat').value = lat.toFixed(6);
-            document.getElementById('tp-lon').value = lon.toFixed(6);
-          }
-        }
-      }
+      const coords = getCoordinates();
       
-      if (!isNaN(lat) && !isNaN(lon)) {
+      if (coords) {
         if (window.map) {
-          window.map.setView([lat, lon], 12);
-          
-          // Añadir un marcador
-          L.marker([lat, lon]).addTo(window.map);
+          window.map.setView([coords.lat, coords.lon], 12);
         }
       } else {
         alert('Por favor, ingrese coordenadas válidas');
@@ -128,32 +159,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnPin = document.getElementById('tp-btn-pin');
   if (btnPin) {
     btnPin.addEventListener('click', function() {
-      let lat, lon;
-
-      // Primero intentar con coordenadas DD
-      lat = parseFloat(document.getElementById('tp-lat').value);
-      lon = parseFloat(document.getElementById('tp-lon').value);
-
-      // Si no hay coordenadas DD, intentar con UTM
-      if (isNaN(lat) || isNaN(lon)) {
-        const utmEasting = document.getElementById('tp-utm-e-17').value;
-        const utmNorthing = document.getElementById('tp-utm-n-17').value;
-        
-        if (utmEasting && utmNorthing) {
-          const utmCoords = utmToLatLon(utmEasting, utmNorthing);
-          if (utmCoords) {
-            lat = utmCoords.lat;
-            lon = utmCoords.lon;
-            
-            // Actualizar campos de coordenadas DD
-            document.getElementById('tp-lat').value = lat.toFixed(6);
-            document.getElementById('tp-lon').value = lon.toFixed(6);
-          }
-        }
-      }
+      const coords = getCoordinates();
       
-      if (!isNaN(lat) && !isNaN(lon) && window.map) {
-        L.marker([lat, lon]).addTo(window.map);
+      if (coords && window.map) {
+        L.marker([coords.lat, coords.lon]).addTo(window.map);
       } else {
         alert('Por favor, ingrese coordenadas válidas');
       }
@@ -164,32 +173,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnCopy = document.getElementById('tp-btn-copy');
   if (btnCopy) {
     btnCopy.addEventListener('click', function() {
-      let lat, lon;
-
-      // Primero intentar con coordenadas DD
-      lat = parseFloat(document.getElementById('tp-lat').value);
-      lon = parseFloat(document.getElementById('tp-lon').value);
-
-      // Si no hay coordenadas DD, intentar con UTM
-      if (isNaN(lat) || isNaN(lon)) {
-        const utmEasting = document.getElementById('tp-utm-e-17').value;
-        const utmNorthing = document.getElementById('tp-utm-n-17').value;
-        
-        if (utmEasting && utmNorthing) {
-          const utmCoords = utmToLatLon(utmEasting, utmNorthing);
-          if (utmCoords) {
-            lat = utmCoords.lat;
-            lon = utmCoords.lon;
-            
-            // Actualizar campos de coordenadas DD
-            document.getElementById('tp-lat').value = lat.toFixed(6);
-            document.getElementById('tp-lon').value = lon.toFixed(6);
-          }
-        }
-      }
+      const coords = getCoordinates();
       
-      if (lat && lon) {
-        const coordText = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+      if (coords) {
+        const coordText = `${coords.lat.toFixed(6)}, ${coords.lon.toFixed(6)}`;
         navigator.clipboard.writeText(coordText).then(() => {
           alert('Coordenadas copiadas: ' + coordText);
         });
