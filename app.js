@@ -19,6 +19,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Convertir Lat/Lon a UTM
+  function latLonToUTM(lat, lon, zone) {
+    try {
+      const utmProj = `+proj=utm +zone=${zone} +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs`;
+      const coords = proj4(wgs84, utmProj, [lon, lat]);
+      return { 
+        easting: coords[0], 
+        northing: coords[1] 
+      };
+    } catch (error) {
+      console.error('Error en conversión Lat/Lon a UTM:', error);
+      return null;
+    }
+  }
+
   // Inicializar mapa
   function initMap() {
     const map = L.map('map').setView([-1.831, -78.183], 7);
@@ -83,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Función común para obtener coordenadas
+  // Función para conversión y validación de coordenadas
   function getCoordinates() {
     let lat, lon;
 
@@ -91,48 +106,55 @@ document.addEventListener('DOMContentLoaded', () => {
     lat = parseFloat(document.getElementById('tp-lat').value);
     lon = parseFloat(document.getElementById('tp-lon').value);
 
-    // Si no hay coordenadas DD, intentar con UTM 17S
+    // Si no hay coordenadas DD, intentar con UTM
     if (isNaN(lat) || isNaN(lon)) {
+      // Primero probar UTM 17S
       const utmEasting17 = document.getElementById('tp-utm-e-17').value;
       const utmNorthing17 = document.getElementById('tp-utm-n-17').value;
       
       if (utmEasting17 && utmNorthing17) {
-        const utmCoords = utmToLatLon(utmEasting17, utmNorthing17, 17);
-        if (utmCoords) {
-          lat = utmCoords.lat;
-          lon = utmCoords.lon;
-          
-          // Actualizar campos de coordenadas DD
-          document.getElementById('tp-lat').value = lat.toFixed(6);
-          document.getElementById('tp-lon').value = lon.toFixed(6);
-          
-          return { lat, lon };
+        const utmCoords17 = utmToLatLon(utmEasting17, utmNorthing17, 17);
+        if (utmCoords17) {
+          lat = utmCoords17.lat;
+          lon = utmCoords17.lon;
+        }
+      }
+
+      // Si UTM 17S no funciona, probar UTM 18S
+      if (isNaN(lat) || isNaN(lon)) {
+        const utmEasting18 = document.getElementById('tp-utm-e-18').value;
+        const utmNorthing18 = document.getElementById('tp-utm-n-18').value;
+        
+        if (utmEasting18 && utmNorthing18) {
+          const utmCoords18 = utmToLatLon(utmEasting18, utmNorthing18, 18);
+          if (utmCoords18) {
+            lat = utmCoords18.lat;
+            lon = utmCoords18.lon;
+          }
         }
       }
     }
 
-    // Si no hay coordenadas DD, intentar con UTM 18S
-    if (isNaN(lat) || isNaN(lon)) {
-      const utmEasting18 = document.getElementById('tp-utm-e-18').value;
-      const utmNorthing18 = document.getElementById('tp-utm-n-18').value;
-      
-      if (utmEasting18 && utmNorthing18) {
-        const utmCoords = utmToLatLon(utmEasting18, utmNorthing18, 18);
-        if (utmCoords) {
-          lat = utmCoords.lat;
-          lon = utmCoords.lon;
-          
-          // Actualizar campos de coordenadas DD
-          document.getElementById('tp-lat').value = lat.toFixed(6);
-          document.getElementById('tp-lon').value = lon.toFixed(6);
-          
-          return { lat, lon };
-        }
-      }
-    }
-
-    // Retornar coordenadas si están definidas
+    // Si tenemos coordenadas válidas, actualizar todos los campos
     if (!isNaN(lat) && !isNaN(lon)) {
+      // Actualizar coordenadas DD
+      document.getElementById('tp-lat').value = lat.toFixed(6);
+      document.getElementById('tp-lon').value = lon.toFixed(6);
+
+      // Actualizar UTM 17S
+      const utmCoords17 = latLonToUTM(lat, lon, 17);
+      if (utmCoords17) {
+        document.getElementById('tp-utm-e-17').value = utmCoords17.easting.toFixed(2);
+        document.getElementById('tp-utm-n-17').value = utmCoords17.northing.toFixed(2);
+      }
+
+      // Actualizar UTM 18S
+      const utmCoords18 = latLonToUTM(lat, lon, 18);
+      if (utmCoords18) {
+        document.getElementById('tp-utm-e-18').value = utmCoords18.easting.toFixed(2);
+        document.getElementById('tp-utm-n-18').value = utmCoords18.northing.toFixed(2);
+      }
+
       return { lat, lon };
     }
 
