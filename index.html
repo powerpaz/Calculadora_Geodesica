@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Calculadora geodésica MINEDEC"</title>
+  <title>Calculadora geodésica MINEDEC</title>
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -24,8 +24,12 @@
   <script src="https://cdn.jsdelivr.net/npm/proj4@2.9.2/dist/proj4.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/proj4leaflet@1.0.2/src/proj4leaflet.min.js"></script>
 
+  <!-- GeoJSON Plugins -->
+  <script src="https://cdn.jsdelivr.net/npm/leaflet-geojson-vt@1.0.0/leaflet-geojson-vt.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/geojson-vt@3.2.0/geojson-vt.min.js"></script>
+
   <!-- Estilos -->
-  <link rel="stylesheet" href="styles.css?v=11" />
+  <link rel="stylesheet" href="styles.css?v=12" />
 
   <!-- ENV -->
   <script>
@@ -40,7 +44,7 @@
   <div class="nav">
     <div class="brand">
       <span class="dot"></span>
-      <span>Calculadora geodésica MINEDEC"</span>
+      <span>Calculadora geodésica MINEDEC</span>
     </div>
 
     <!-- Logo institucional -->
@@ -51,7 +55,6 @@
       <input id="q-nombre" placeholder="Buscar nombre..." />
       <button id="btn-buscar" class="btn primary">Buscar</button>
       <button id="btn-limpiar" class="btn ghost">Limpiar</button>
-      <!-- Botón global: Ocultar/Mostrar tabla -->
       <button id="btn-toggle-table" class="btn ghost" title="Ocultar/mostrar tabla">Ocultar tabla</button>
     </div>
   </div>
@@ -111,6 +114,7 @@
         <strong>Transformación</strong>
         <div class="tp-actions">
           <button class="btn sm ghost" id="tp-btn-center">Ir</button>
+          <button class="btn sm ghost" id="tp-btn-clear-calculator">Limpiar calculadora</button>
           <button class="btn sm ghost" id="tp-btn-pin">Fijar punto</button>
           <button class="btn sm ghost" id="tp-btn-copy">Copiar</button>
         </div>
@@ -137,7 +141,7 @@
         </div>
 
         <div class="tp-row">
-          <label>UTM (17S — principal)</label>
+          <label>UTM (17S – principal)</label>
           <div class="tp-grid tp-utm">
             <input id="tp-utm-zone-17" value="17" disabled />
             <select id="tp-utm-hem-17" disabled>
@@ -149,7 +153,7 @@
         </div>
 
         <div class="tp-row">
-          <label>UTM (18S — alterna)</label>
+          <label>UTM (18S – alterna)</label>
           <div class="tp-grid tp-utm">
             <input id="tp-utm-zone-18" value="18" disabled />
             <select id="tp-utm-hem-18" disabled>
@@ -161,19 +165,11 @@
         </div>
 
         <div class="tp-row tp-hint">
-          <small>Tip: clic en el mapa para capturar Lat/Lon. “Ir” centra; “Fijar punto” deja marcador.</small>
+          <small>Tip: clic en el mapa para capturar Lat/Lon. "Ir" centra; "Fijar punto" deja marcador.</small>
         </div>
       </div>
     </div>
   </div>
-
-  <!-- App -->
-  <script src="app.js?v=11"></script>
-  <script src="medir-distancia.js"></script>
-  
-  <!-- ⬇️ NUEVO: cruz roja para "Fijar punto" -->
-  <link rel="stylesheet" href="cross-pin.css">
-  <script src="cross-pin.js"></script>
 
   <!-- Basemap/Overlay Switcher (debajo de la calculadora) -->
   <div id="basemap-switcher" class="panel card soft shadow">
@@ -187,5 +183,12 @@
     </div>
   </div>
 
+  <!-- App -->
+  <script src="app.js?v=12"></script>
+  <script src="medir-distancia.js"></script>
+  
+  <!-- Cruz roja para "Fijar punto" -->
+  <link rel="stylesheet" href="cross-pin.css">
+  <script src="cross-pin.js"></script>
 </body>
 </html>
