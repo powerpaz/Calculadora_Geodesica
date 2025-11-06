@@ -368,71 +368,158 @@ function setupSearch() {
 
 /* ---------- Transformación ---------- */
 function setupTransformPanel() {
+  const EPSG32717 = "+proj=utm +zone=17 +south +datum=WGS84 +units=m +no_defs +type=crs";
+  const EPSG32718 = "+proj=utm +zone=18 +south +datum=WGS84 +units=m +no_defs +type=crs";
+
+  // Captura coordenadas al hacer clic en el mapa
   map.on("click", (e) => {
     $("#tp-lat").value = e.latlng.lat.toFixed(6);
     $("#tp-lon").value = e.latlng.lng.toFixed(6);
     ddToUTM();
+    ddToDMS();
   });
 
+  // Botón "Ir" - centra el mapa
   $("#tp-btn-center").addEventListener("click", () => {
     const lat = parseFloat($("#tp-lat").value),
           lon = parseFloat($("#tp-lon").value);
-    if (isFinite(lat) && isFinite(lon)) map.setView([lat, lon], 15);
-  });
-
-  // --- NUEVO: ícono cruz roja
-  const crossIcon = L.divIcon({
-    className: 'cross-pin',
-    html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-                width="18" height="18" stroke="red" stroke-width="3" fill="none"
-                stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 12h16M12 4v16"/>
-           </svg>`,
-    iconSize: [18, 18],
-    iconAnchor: [9, 9]
-  });
-
-  let pin;
-  $("#tp-btn-pin").addEventListener("click", () => {
-    // Si ya hay un pin, lo quitamos antes de poner otro
-    if (pin) { map.removeLayer(pin); pin = null; }
-    const lat = parseFloat($("#tp-lat").value),
-          lon = parseFloat($("#tp-lon").value);
     if (isFinite(lat) && isFinite(lon)) {
-      pin = L.marker([lat, lon], { icon: crossIcon }).addTo(map);
+      map.setView([lat, lon], 15);
+      setStatus("Mapa centrado en coordenadas");
+    } else {
+      setStatus("Coordenadas inválidas");
     }
   });
 
+  // El botón "Fijar punto" se maneja en cross-pin.js
+
+  // Botón "Copiar" - copia todas las coordenadas al portapapeles
   $("#tp-btn-copy").addEventListener("click", async () => {
     const txt = [
       `Lat, Lon (DD): ${$("#tp-lat").value}, ${$("#tp-lon").value}`,
+      `DMS: ${$("#tp-lat-d").value}° ${$("#tp-lat-m").value}' ${$("#tp-lat-s").value}" / ${$("#tp-lon-d").value}° ${$("#tp-lon-m").value}' ${$("#tp-lon-s").value}"`,
       `UTM 17S: Este ${$("#tp-utm-e-17").value}, Norte ${$("#tp-utm-n-17").value}`,
       `UTM 18S: Este ${$("#tp-utm-e-18").value}, Norte ${$("#tp-utm-n-18").value}`
     ].join("\n");
     try {
       await navigator.clipboard.writeText(txt);
-      setStatus("Coordenadas copiadas");
+      setStatus("Coordenadas copiadas al portapapeles");
     } catch {
-      setStatus("No se pudo copiar");
+      setStatus("Error al copiar");
     }
   });
 
-  const EPSG32717 = "+proj=utm +zone=17 +south +datum=WGS84 +units=m +no_defs +type=crs";
-  const EPSG32718 = "+proj=utm +zone=18 +south +datum=WGS84 +units=m +no_defs +type=crs";
-
+  // Conversión DD → UTM
   function ddToUTM() {
     const lat = parseFloat($("#tp-lat").value),
           lon = parseFloat($("#tp-lon").value);
     if (!isFinite(lat) || !isFinite(lon)) return;
-    const p17 = proj4("EPSG:4326", EPSG32717, [lon, lat]);
-    $("#tp-utm-e-17").value = p17[0].toFixed(2);
-    $("#tp-utm-n-17").value = p17[1].toFixed(2);
-    const p18 = proj4("EPSG:4326", EPSG32718, [lon, lat]);
-    $("#tp-utm-e-18").value = p18[0].toFixed(2);
-    $("#tp-utm-n-18").value = p18[1].toFixed(2);
+
+    try {
+      const p17 = proj4("EPSG:4326", EPSG32717, [lon, lat]);
+      $("#tp-utm-e-17").value = p17[0].toFixed(2);
+      $("#tp-utm-n-17").value = p17[1].toFixed(2);
+
+      const p18 = proj4("EPSG:4326", EPSG32718, [lon, lat]);
+      $("#tp-utm-e-18").value = p18[0].toFixed(2);
+      $("#tp-utm-n-18").value = p18[1].toFixed(2);
+    } catch (e) {
+      console.error("Error en conversión UTM:", e);
+    }
   }
-  $("#tp-lat").addEventListener("input", ddToUTM);
-  $("#tp-lon").addEventListener("input", ddToUTM);
+
+  // Conversión DD → DMS
+  function ddToDMS() {
+    const lat = parseFloat($("#tp-lat").value),
+          lon = parseFloat($("#tp-lon").value);
+    if (!isFinite(lat) || !isFinite(lon)) return;
+
+    // Latitud
+    const latAbs = Math.abs(lat);
+    const latD = Math.floor(latAbs);
+    const latM = Math.floor((latAbs - latD) * 60);
+    const latS = ((latAbs - latD - latM / 60) * 3600).toFixed(2);
+    $("#tp-lat-d").value = lat >= 0 ? latD : -latD;
+    $("#tp-lat-m").value = latM;
+    $("#tp-lat-s").value = latS;
+
+    // Longitud
+    const lonAbs = Math.abs(lon);
+    const lonD = Math.floor(lonAbs);
+    const lonM = Math.floor((lonAbs - lonD) * 60);
+    const lonS = ((lonAbs - lonD - lonM / 60) * 3600).toFixed(2);
+    $("#tp-lon-d").value = lon >= 0 ? lonD : -lonD;
+    $("#tp-lon-m").value = lonM;
+    $("#tp-lon-s").value = lonS;
+  }
+
+  // Conversión UTM 17S → DD
+  function utm17ToDD() {
+    const e = parseFloat($("#tp-utm-e-17").value),
+          n = parseFloat($("#tp-utm-n-17").value);
+    if (!isFinite(e) || !isFinite(n)) return;
+
+    try {
+      const [lon, lat] = proj4(EPSG32717, "EPSG:4326", [e, n]);
+      $("#tp-lat").value = lat.toFixed(6);
+      $("#tp-lon").value = lon.toFixed(6);
+      ddToDMS();
+      ddToUTM(); // Actualiza también zona 18
+    } catch (e) {
+      console.error("Error en conversión UTM→DD:", e);
+    }
+  }
+
+  // Conversión UTM 18S → DD
+  function utm18ToDD() {
+    const e = parseFloat($("#tp-utm-e-18").value),
+          n = parseFloat($("#tp-utm-n-18").value);
+    if (!isFinite(e) || !isFinite(n)) return;
+
+    try {
+      const [lon, lat] = proj4(EPSG32718, "EPSG:4326", [e, n]);
+      $("#tp-lat").value = lat.toFixed(6);
+      $("#tp-lon").value = lon.toFixed(6);
+      ddToDMS();
+      ddToUTM(); // Actualiza también zona 17
+    } catch (e) {
+      console.error("Error en conversión UTM→DD:", e);
+    }
+  }
+
+  // Conversión DMS → DD
+  function dmsToDD() {
+    const latD = parseFloat($("#tp-lat-d").value) || 0,
+          latM = parseFloat($("#tp-lat-m").value) || 0,
+          latS = parseFloat($("#tp-lat-s").value) || 0,
+          lonD = parseFloat($("#tp-lon-d").value) || 0,
+          lonM = parseFloat($("#tp-lon-m").value) || 0,
+          lonS = parseFloat($("#tp-lon-s").value) || 0;
+
+    const lat = Math.sign(latD) * (Math.abs(latD) + latM / 60 + latS / 3600);
+    const lon = Math.sign(lonD) * (Math.abs(lonD) + lonM / 60 + lonS / 3600);
+
+    $("#tp-lat").value = lat.toFixed(6);
+    $("#tp-lon").value = lon.toFixed(6);
+    ddToUTM();
+  }
+
+  // Event listeners para conversiones automáticas
+  $("#tp-lat").addEventListener("input", () => { ddToUTM(); ddToDMS(); });
+  $("#tp-lon").addEventListener("input", () => { ddToUTM(); ddToDMS(); });
+
+  $("#tp-utm-e-17").addEventListener("input", utm17ToDD);
+  $("#tp-utm-n-17").addEventListener("input", utm17ToDD);
+
+  $("#tp-utm-e-18").addEventListener("input", utm18ToDD);
+  $("#tp-utm-n-18").addEventListener("input", utm18ToDD);
+
+  $("#tp-lat-d").addEventListener("input", dmsToDD);
+  $("#tp-lat-m").addEventListener("input", dmsToDD);
+  $("#tp-lat-s").addEventListener("input", dmsToDD);
+  $("#tp-lon-d").addEventListener("input", dmsToDD);
+  $("#tp-lon-m").addEventListener("input", dmsToDD);
+  $("#tp-lon-s").addEventListener("input", dmsToDD);
 }
 
 
@@ -476,60 +563,4 @@ bus.addEventListener("page-change", () => renderTable());
   setupTransformPanel();
   setStatus("Listo");
 })();
-
-
-function setupTransformPanel() {
-  map.on("click", (e) => {
-    $("#tp-lat").value = e.latlng.lat.toFixed(6);
-    $("#tp-lon").value = e.latlng.lng.toFixed(6);
-    ddToUTM();
-  });
-  $("#tp-btn-center").addEventListener("click", () => {
-    const lat = parseFloat($("#tp-lat").value), lon = parseFloat($("#tp-lon").value);
-    if (isFinite(lat) && isFinite(lon)) map.setView([lat, lon], 15);
-  });
-  const crossIcon = L.divIcon({
-    className: 'cross-pin',
-    html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-              width="18" height="18" stroke="red" stroke-width="3" fill="none"
-              stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 12h16M12 4v16"/>
-         </svg>`,
-    iconSize: [18, 18],
-    iconAnchor: [9, 9]
-  });
-  let pin;
-  const originalBtn = document.getElementById("tp-btn-pin");
-  if (originalBtn){
-    const btn = originalBtn.cloneNode(true);
-    originalBtn.replaceWith(btn);
-    btn.addEventListener("click", () => {
-      const lat = parseFloat($("#tp-lat").value), lon = parseFloat($("#tp-lon").value);
-      if (!isFinite(lat) || !isFinite(lon)) return;
-      if (pin) { map.removeLayer(pin); pin = null; }
-      pin = L.marker([lat, lon], { icon: crossIcon }).addTo(map);
-    });
-  }
-  $("#tp-btn-copy").addEventListener("click", async () => {
-    const txt = [
-      `Lat, Lon (DD): ${$("#tp-lat").value}, ${$("#tp-lon").value}`,
-      `UTM 17S: Este ${$("#tp-utm-e-17").value}, Norte ${$("#tp-utm-n-17").value}`,
-      `UTM 18S: Este ${$("#tp-utm-e-18").value}, Norte ${$("#tp-utm-n-18").value}`
-    ].join("\n");
-    try { await navigator.clipboard.writeText(txt); setStatus("Coordenadas copiadas"); }
-    catch { setStatus("No se pudo copiar"); }
-  });
-  const EPSG32717 = "+proj=utm +zone=17 +south +datum=WGS84 +units=m +no_defs +type=crs";
-  const EPSG32718 = "+proj=utm +zone=18 +south +datum=WGS84 +units=m +no_defs +type=crs";
-  function ddToUTM() {
-    const lat = parseFloat($("#tp-lat").value), lon = parseFloat($("#tp-lon").value);
-    if (!isFinite(lat) || !isFinite(lon)) return;
-    const p = proj4("EPSG:4326", EPSG32717, [lon, lat]);
-    $("#tp-utm-e-17").value = p[0].toFixed(2); $("#tp-utm-n-17").value = p[1].toFixed(2);
-    const p18 = proj4("EPSG:4326", EPSG32718, [lon, lat]);
-    $("#tp-utm-e-18").value = p18[0].toFixed(2); $("#tp-utm-n-18").value = p18[1].toFixed(2);
-  }
-  $("#tp-lat").addEventListener("input", ddToUTM);
-  $("#tp-lon").addEventListener("input", ddToUTM);
-}
 

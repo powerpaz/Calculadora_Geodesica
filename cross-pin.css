@@ -1,3 +1,30 @@
+.cross-pin {
+  filter: drop-shadow(0 2px 6px rgba(255, 59, 59, 0.6));
+  animation: pinPulse 2s ease-in-out infinite;
+}
 
-.cross-pin { filter: drop-shadow(0 0 2px rgba(0,0,0,.6)); }
-.cross-pin svg { display:block; }
+.cross-pin svg {
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+.cross-pin:hover svg {
+  transform: scale(1.15);
+}
+
+.cross-pin-container {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes pinPulse {
+  0%, 100% {
+    filter: drop-shadow(0 2px 6px rgba(255, 59, 59, 0.6));
+  }
+  50% {
+    filter: drop-shadow(0 2px 12px rgba(255, 59, 59, 0.9));
+  }
+}
