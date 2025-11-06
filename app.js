@@ -190,24 +190,37 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
-
   // Botón Copiar
-  const btnCopy = document.getElementById('tp-btn-copy');
-  if (btnCopy) {
-    btnCopy.addEventListener('click', function() {
-      const coords = getCoordinates();
+const btnCopy = document.getElementById('tp-btn-copy');
+if (btnCopy) {
+  btnCopy.addEventListener('click', function() {
+    const coords = getCoordinates();
+    
+    if (coords) {
+      // Coordenadas en Grados Decimales
+      const ddCoords = `Grados Decimales: ${coords.lat.toFixed(6)}, ${coords.lon.toFixed(6)}`;
       
-      if (coords) {
-        const coordText = `${coords.lat.toFixed(6)}, ${coords.lon.toFixed(6)}`;
-        navigator.clipboard.writeText(coordText).then(() => {
-          alert('Coordenadas copiadas: ' + coordText);
-        });
-      } else {
-        alert('Por favor, ingrese coordenadas válidas');
-      }
-    });
-  }
-
+      // Coordenadas UTM 17S
+      const utm17Easting = document.getElementById('tp-utm-e-17').value;
+      const utm17Northing = document.getElementById('tp-utm-n-17').value;
+      const utm17Coords = `UTM 17S: ${utm17Easting}, ${utm17Northing}`;
+      
+      // Coordenadas UTM 18S
+      const utm18Easting = document.getElementById('tp-utm-e-18').value;
+      const utm18Northing = document.getElementById('tp-utm-n-18').value;
+      const utm18Coords = `UTM 18S: ${utm18Easting}, ${utm18Northing}`;
+      
+      // Texto completo para copiar
+      const fullCoordsText = `${ddCoords}\n${utm17Coords}\n${utm18Coords}`;
+      
+      navigator.clipboard.writeText(fullCoordsText).then(() => {
+        alert('Coordenadas copiadas:\n' + fullCoordsText);
+      });
+    } else {
+      alert('Por favor, ingrese coordenadas válidas');
+    }
+  });
+}
   // Iniciar aplicación
   initMap();
 });
