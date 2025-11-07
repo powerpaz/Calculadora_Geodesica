@@ -97,7 +97,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Inicializar mapa
   function initMap() {
-    const map = L.map('map').setView([-1.831, -78.183], 7);
+    const map = L.map('map', {
+      zoomControl: true,
+      attributionControl: true,
+      drawControl: false,
+      editControl: false
+    }).setView([-1.831, -78.183], 7);
     
     // Definir mapas base
     const basemaps = {
