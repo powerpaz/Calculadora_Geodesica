@@ -17,18 +17,19 @@ document.addEventListener('DOMContentLoaded', () => {
               let popupContent = '<div style="max-width: 300px;">';
               
               // Campos importantes primero
-              const priorityFields = ['cod_postal', 'DPA_DESPRO', 'DPA_DESCAN', 'DPA_DESPAR'];
+              const priorityFields = ['cod_postal', 'DPA_DESPRO', 'DPA_DESCAN', 'DPA_DESPAR', 'DES_CIRC', 'COD_CIRCUI'];
               const fieldLabels = {
                 'cod_postal': 'Código Postal',
                 'DPA_DESPRO': 'Provincia',
                 'DPA_DESCAN': 'Cantón',
                 'DPA_DESPAR': 'Parroquia',
+                'DES_CIRC': 'Circuito',
+                'COD_CIRCUI': 'Código Circuito',
                 'DPA_PROVIN': 'Cód. Provincia',
                 'DPA_CANTON': 'Cód. Cantón',
                 'DPA_PARROQ': 'Cód. Parroquia',
-                'ZONA': 'Zona',
-                'area_m2': 'Área (m²)',
-                'perim_m': 'Perímetro (m)'
+                'COD_DISTRI': 'Código Distrito',
+                'ZONA': 'Zona'
               };
               
               // Agregar campos prioritarios
