@@ -67,25 +67,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function initMap() {
     const map = L.map('map').setView([-1.831, -78.183], 7);
     
-    const basemaps = {
-      osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
-        attribution: '© OpenStreetMap contributors' 
-      }),
-      esriSat: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles © Esri'
-      }),
-      esriStreet: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles © Esri'
-      }),
-      carto: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        attribution: '© OpenStreetMap contributors, © CARTO'
-      })
-    };
-
-    basemaps.osm.addTo(map);
-
-    // Control de capas base
-    L.control.layers(basemaps).addTo(map);
+    // Mapa base OSM
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+      attribution: '© OpenStreetMap contributors' 
+    }).addTo(map);
 
     // Cargar GeoJSON
     loadGeoJSON('GRID_JSON.geojson', map, {
