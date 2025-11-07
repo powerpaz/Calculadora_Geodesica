@@ -198,7 +198,7 @@ html, body {
   backdrop-filter: blur(6px);
   padding: 12px 14px !important;
   margin-top: 60px !important;
-  margin-left: 10px !important;
+  margin-right: 10px !important;
 }
 
 .leaflet-control-layers-toggle {
