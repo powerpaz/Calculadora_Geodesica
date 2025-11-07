@@ -117,9 +117,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Agregar OSM por defecto
     basemaps['OSM'].addTo(map);
 
-    // Agregar control de capas en la esquina superior izquierda
+    // Agregar control de capas en la esquina superior derecha
     L.control.layers(basemaps, null, {
-      position: 'topleft',
+      position: 'topright',
       collapsed: false
     }).addTo(map);
 
