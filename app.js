@@ -98,9 +98,29 @@ document.addEventListener('DOMContentLoaded', () => {
   function initMap() {
     const map = L.map('map').setView([-1.831, -78.183], 7);
     
-    // Mapa base OSM
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
-      attribution: '© OpenStreetMap contributors' 
+    // Definir mapas base
+    const basemaps = {
+      'OSM': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+      }),
+      'Satélite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles © Esri',
+        maxZoom: 19
+      }),
+      'Street': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles © Esri',
+        maxZoom: 19
+      })
+    };
+
+    // Agregar OSM por defecto
+    basemaps['OSM'].addTo(map);
+
+    // Agregar control de capas en la esquina superior izquierda
+    L.control.layers(basemaps, null, {
+      position: 'topleft',
+      collapsed: false
     }).addTo(map);
 
     // Cargar GeoJSON
