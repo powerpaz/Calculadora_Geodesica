@@ -149,9 +149,6 @@ document.addEventListener('DOMContentLoaded', () => {
       fillOpacity: 0.15
     });
 
-    // Añadir medidor de distancia
-    initMeasure(map);
-
     window.map = map;
     return map;
   }
