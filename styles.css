@@ -243,6 +243,21 @@ html, body {
   margin: 8px 0 !important;
 }
 
+/* Ocultar controles de edición/dibujo no deseados */
+.leaflet-draw,
+.leaflet-draw-toolbar,
+.leaflet-draw-edit-edit,
+.leaflet-draw-edit-remove,
+.leaflet-pm-toolbar,
+.leaflet-draw-actions,
+.leaflet-draw-draw-marker,
+.leaflet-draw-draw-polyline,
+.leaflet-draw-draw-polygon,
+.leaflet-draw-draw-rectangle,
+.leaflet-draw-draw-circle {
+  display: none !important;
+}
+
 
 /* Responsive Design */
 @media (max-width: 1200px) {
