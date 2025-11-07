@@ -13,9 +13,40 @@ document.addEventListener('DOMContentLoaded', () => {
           style: style,
           onEachFeature: (feature, layer) => {
             if (feature.properties) {
-              let popupContent = Object.entries(feature.properties)
-                .map(([key, value]) => `<strong>${key}:</strong> ${value}`)
-                .join('<br>');
+              // Crear contenido del popup con formato mejorado
+              let popupContent = '<div style="max-width: 300px;">';
+              
+              // Campos importantes primero
+              const priorityFields = ['cod_postal', 'DPA_DESPRO', 'DPA_DESCAN', 'DPA_DESPAR'];
+              const fieldLabels = {
+                'cod_postal': 'Código Postal',
+                'DPA_DESPRO': 'Provincia',
+                'DPA_DESCAN': 'Cantón',
+                'DPA_DESPAR': 'Parroquia',
+                'DPA_PROVIN': 'Cód. Provincia',
+                'DPA_CANTON': 'Cód. Cantón',
+                'DPA_PARROQ': 'Cód. Parroquia',
+                'ZONA': 'Zona',
+                'area_m2': 'Área (m²)',
+                'perim_m': 'Perímetro (m)'
+              };
+              
+              // Agregar campos prioritarios
+              priorityFields.forEach(field => {
+                if (feature.properties[field]) {
+                  const label = fieldLabels[field] || field;
+                  popupContent += `<strong>${label}:</strong> ${feature.properties[field]}<br>`;
+                }
+              });
+              
+              // Agregar otros campos importantes
+              Object.entries(feature.properties).forEach(([key, value]) => {
+                if (!priorityFields.includes(key) && fieldLabels[key]) {
+                  popupContent += `<strong>${fieldLabels[key]}:</strong> ${value}<br>`;
+                }
+              });
+              
+              popupContent += '</div>';
               layer.bindPopup(popupContent);
             }
           }
@@ -83,6 +114,13 @@ document.addEventListener('DOMContentLoaded', () => {
       color: '#ff0000',
       weight: 1,
       fillOpacity: 0.1
+    });
+
+    // Cargar códigos postales
+    loadGeoJSON('DA_DPA_CODPOST_2018_simplified.geojson', map, {
+      color: '#34d399',
+      weight: 1,
+      fillOpacity: 0.15
     });
 
     // Añadir medidor de distancia
