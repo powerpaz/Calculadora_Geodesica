@@ -111,8 +111,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     loadGeoJSON('provincias_simplificado.geojson', map, {
-      color: '#ff0000',
-      weight: 1,
+      color: '#202020',
+      weight: 2,
       fillOpacity: 0.1
     });
 
