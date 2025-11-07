@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Cargar códigos postales
     loadGeoJSON('DA_DPA_CODPOST_2018_simplified.geojson', map, {
-      color: '#34d399',
+      color: '#1DB954',
       weight: 1,
       fillOpacity: 0.15
     });
