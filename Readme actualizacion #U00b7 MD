@@ -1,0 +1,127 @@
+# Actualización del Geoportal - Códigos Postales
+
+## Resumen de cambios
+
+✅ **Eliminado el selector de mapas base** (OSM, Satélite, Esri Street, Carto)
+✅ **Simplificado el GeoJSON de códigos postales** (reducción del 13.9%)
+✅ **Mejorado el sistema de popups** con información más clara y organizada
+✅ **Agregada la capa de códigos postales** al mapa
+
+## Archivos actualizados
+
+### 1. `DA_DPA_CODPOST_2018_simplified.geojson` (4.2 MB)
+- Archivo GeoJSON simplificado con 3,360 polígonos de códigos postales
+- Reducción de puntos: 13.9% menos que el original
+- Incluye información de provincias, cantones, parroquias y códigos postales
+
+### 2. `app.js`
+**Cambios:**
+- Eliminado el sistema de múltiples mapas base
+- Agregada la carga del GeoJSON de códigos postales con estilo verde (`#34d399`)
+- Mejorada la función `loadGeoJSON()` para mostrar popups más legibles
+- Los popups ahora muestran primero la información más importante:
+  - Código Postal
+  - Provincia
+  - Cantón
+  - Parroquia
+
+### 3. `index.html`
+**Cambios:**
+- Eliminado el panel completo de selector de mapas base
+
+### 4. `styles.css`
+**Cambios:**
+- Eliminados todos los estilos CSS del selector de mapas base
+
+## Instrucciones de instalación
+
+### Para usar los archivos actualizados:
+
+1. **Copia estos 4 archivos a tu carpeta del proyecto:**
+   ```
+   ├── DA_DPA_CODPOST_2018_simplified.geojson
+   ├── app.js
+   ├── index.html
+   └── styles.css
+   ```
+
+2. **Mantén también estos archivos originales:**
+   ```
+   ├── config.js
+   ├── cross-pin.css
+   ├── cross-pin.js
+   ├── medir-distancia.js
+   ├── logo.png
+   ├── GRID_JSON.geojson
+   └── provincias_simplificado.geojson
+   ```
+
+3. **Estructura final del proyecto:**
+   ```
+   tu-proyecto/
+   ├── DA_DPA_CODPOST_2018_simplified.geojson  ← NUEVO
+   ├── GRID_JSON.geojson
+   ├── provincias_simplificado.geojson
+   ├── logo.png
+   ├── config.js
+   ├── cross-pin.css
+   ├── cross-pin.js
+   ├── index.html                               ← ACTUALIZADO
+   ├── medir-distancia.js
+   ├── styles.css                               ← ACTUALIZADO
+   └── app.js                                   ← ACTUALIZADO
+   ```
+
+4. **Abre `index.html` en tu navegador**
+
+## Características de la capa de códigos postales
+
+### Estilos visuales:
+- **Color:** Verde (`#34d399`)
+- **Grosor de línea:** 1px
+- **Opacidad de relleno:** 15%
+
+### Información disponible en popups:
+- Código Postal
+- Provincia
+- Cantón  
+- Parroquia
+- Códigos administrativos (DPA)
+- Zona
+- Área en m²
+- Perímetro en metros
+
+## Capas visibles en el mapa
+
+1. **Mapa base:** OpenStreetMap (OSM)
+2. **GRID_JSON:** Cuadrícula en azul (#3388ff)
+3. **Provincias:** Límites provinciales en rojo (#ff0000)
+4. **Códigos postales:** Polígonos en verde (#34d399) ← NUEVO
+
+## Funcionalidades mantenidas
+
+✅ Calculadora de coordenadas (DD, DMS, UTM 17S, UTM 18S)
+✅ Medidor de distancias (botón con icono de regla)
+✅ Fijar puntos en el mapa
+✅ Copiar coordenadas
+✅ Click en el mapa para capturar coordenadas
+
+## Próximas mejoras sugeridas
+
+- [ ] Control de visibilidad de capas (mostrar/ocultar cada GeoJSON)
+- [ ] Búsqueda por código postal
+- [ ] Filtros por provincia/cantón
+- [ ] Exportar información de las capas
+
+## Soporte
+
+Si necesitas más simplificación del GeoJSON o ajustes adicionales, puedo:
+- Reducir más el tamaño del archivo
+- Cambiar los colores de las capas
+- Agregar/quitar información de los popups
+- Implementar nuevas funcionalidades
+
+---
+
+**Fecha de actualización:** 7 de noviembre de 2025
+**Versión:** 2.0
