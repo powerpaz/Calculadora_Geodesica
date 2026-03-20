@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Conversión Masiva UTM 17S | MINEDEC-DPI</title>
+
+  <!-- Proj4 (misma versión que app principal) -->
+  <script src="https://cdn.jsdelivr.net/npm/proj4@2.9.2/dist/proj4.js"></script>
+  <!-- SheetJS para leer/escribir Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    /* ── Variables (misma paleta que la app principal) ───────────────── */
+    :root {
+      --bg:        #0f1318;
+      --bg-soft:   #151b23;
+      --panel:     #111821;
+      --card:      #141d27;
+      --text:      #f2f6fc;
+      --text-muted:#b9c4d1;
+      --primary:   #3b82f6;
+      --primary-2: #2563eb;
+      --accent:    #22d3ee;
+      --danger:    #ff6b6b;
+      --ok:        #34d399;
+      --warn:      #fbbf24;
+      --border:    rgba(255,255,255,.13);
+      --radius:    14px;
+      --shadow:    0 10px 28px rgba(0,0,0,.4);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      min-height: 100vh;
+      background: linear-gradient(160deg, #0d1219 0%, #0e1824 100%);
+      color: var(--text);
+      font: 14px/1.5 'Segoe UI', system-ui, sans-serif;
+    }
+
+    /* ── Nav (igual que la app) ──────────────────────────────────────── */
+    .nav {
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      background: rgba(255,255,255,.05);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 14px; }
+    .brand svg { color: var(--accent); }
+    .nav-back {
+      display: flex; align-items: center; gap: 6px;
+      color: var(--accent); text-decoration: none;
+      font-size: 13px; font-weight: 500;
+      padding: 6px 12px; border-radius: 8px;
+      border: 1px solid rgba(34,211,238,.25);
+      transition: background .2s;
+    }
+    .nav-back:hover { background: rgba(34,211,238,.1); }
+
+    /* ── Layout ──────────────────────────────────────────────────────── */
+    .page { max-width: 1200px; margin: 0 auto; padding: 28px 20px 60px; }
+
+    h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+    .subtitle { color: var(--text-muted); font-size: 13px; margin-bottom: 28px; }
+
+    /* ── Cards ───────────────────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 13px; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; color: var(--accent);
+      margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+    }
+    .card-title .badge {
+      background: rgba(34,211,238,.15); border-radius: 6px;
+      padding: 2px 8px; font-size: 11px; letter-spacing: 0;
+      text-transform: none; color: var(--accent);
+    }
+
+    /* ── Formatos soportados ─────────────────────────────────────────── */
+    .formats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 10px;
+    }
+    .fmt-item {
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+    }
+    .fmt-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+    .fmt-example { font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 12px; color: var(--ok); }
+
+    /* ── Drop zone ───────────────────────────────────────────────────── */
+    .drop-zone {
+      border: 2px dashed rgba(59,130,246,.4);
+      border-radius: var(--radius);
+      padding: 40px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      position: relative;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--primary);
+      background: rgba(59,130,246,.06);
+    }
+    .drop-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .drop-icon { font-size: 36px; margin-bottom: 10px; }
+    .drop-text { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .drop-sub { font-size: 12px; color: var(--text-muted); }
+
+    /* ── Configuración de columnas ───────────────────────────────────── */
+    .config-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px;
+      align-items: end;
+    }
+    @media (max-width: 640px) { .config-row { grid-template-columns: 1fr; } }
+
+    .field label {
+      display: block; font-size: 12px; color: var(--text-muted);
+      margin-bottom: 6px; font-weight: 500;
+    }
+    .field select, .field input[type="number"] {
+      width: 100%;
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 8px 12px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .field select:focus, .field input[type="number"]:focus {
+      border-color: var(--primary);
+    }
+    .field select option { background: #1a2535; }
+
+    /* ── Preview tabla ───────────────────────────────────────────────── */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      max-height: 420px;
+      overflow-y: auto;
+    }
+    table {
+      width: 100%; border-collapse: collapse;
+      font-size: 12.5px;
+    }
+    thead th {
+      background: rgba(59,130,246,.18);
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: var(--accent);
+      position: sticky; top: 0;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    tbody tr:nth-child(even) { background: rgba(255,255,255,.025); }
+    tbody tr:hover { background: rgba(59,130,246,.08); }
+    td {
+      padding: 8px 12px;
+      border-bottom: 1px solid rgba(255,255,255,.05);
+      white-space: nowrap;
+    }
+    td.ok   { color: var(--ok); font-family: monospace; }
+    td.err  { color: var(--danger); font-size: 11px; }
+    td.warn { color: var(--warn); }
+    td.src  { color: var(--text-muted); max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ── Estadísticas ────────────────────────────────────────────────── */
+    .stats {
+      display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 18px;
+    }
+    .stat {
+      background: rgba(255,255,255,.05);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 18px;
+      min-width: 120px;
+    }
+    .stat-val { font-size: 22px; font-weight: 700; }
+    .stat-lbl { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .stat.ok   .stat-val { color: var(--ok); }
+    .stat.err  .stat-val { color: var(--danger); }
+    .stat.warn .stat-val { color: var(--warn); }
+    .stat.info .stat-val { color: var(--accent); }
+
+    /* ── Botones ─────────────────────────────────────────────────────── */
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 18px; }
+    .btn {
+      padding: 9px 20px; border-radius: 9px; border: none;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      display: flex; align-items: center; gap: 7px;
+      transition: opacity .2s, transform .1s;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--primary-2); }
+    .btn-ok { background: var(--ok); color: #0a1a14; }
+    .btn-ok:hover:not(:disabled) { background: #22b87e; }
+    .btn-ghost {
+      background: transparent; color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover:not(:disabled) { border-color: var(--primary); color: var(--text); }
+
+    /* ── Progress ────────────────────────────────────────────────────── */
+    .progress-wrap { margin: 12px 0; }
+    .progress-bar {
+      height: 6px; background: rgba(255,255,255,.1);
+      border-radius: 99px; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent));
+      border-radius: 99px;
+      transition: width .3s;
+    }
+    .progress-label { font-size: 12px; color: var(--text-muted); margin-top: 5px; }
+
+    /* ── Estado vacío ────────────────────────────────────────────────── */
+    .empty {
+      text-align: center; padding: 40px; color: var(--text-muted);
+    }
+    .empty-icon { font-size: 40px; margin-bottom: 10px; opacity: .4; }
+
+    /* ── Toasts ──────────────────────────────────────────────────────── */
+    #toast-container {
+      position: fixed; bottom: 24px; right: 24px;
+      display: flex; flex-direction: column; gap: 8px; z-index: 999;
+    }
+    .toast {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 18px;
+      font-size: 13px; min-width: 240px;
+      box-shadow: var(--shadow);
+      animation: slideIn .25s ease;
+    }
+    .toast.ok   { border-left: 3px solid var(--ok); }
+    .toast.err  { border-left: 3px solid var(--danger); }
+    .toast.info { border-left: 3px solid var(--accent); }
+    @keyframes slideIn {
+      from { opacity:0; transform: translateX(20px); }
+      to   { opacity:1; transform: translateX(0); }
+    }
+
+    /* ── Plantilla de ejemplo ────────────────────────────────────────── */
+    .template-info {
+      background: rgba(34,211,238,.05);
+      border: 1px solid rgba(34,211,238,.2);
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+    .template-info b { color: var(--accent); }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav">
+  <div class="brand">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+         fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="4" y="2" width="16" height="20" rx="2"/>
+      <line x1="8" y1="6" x2="16" y2="6"/>
+      <rect x="8" y="10" width="2" height="2" fill="currentColor"/>
+      <rect x="12" y="10" width="2" height="2" fill="currentColor"/>
+      <rect x="16" y="10" width="2" height="2" fill="currentColor"/>
+    </svg>
+    <span>Sistema de Conversión y Cálculo Geodésico | MINEDEC-DPI</span>
+  </div>
+  <a href="index.html" class="nav-back">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <path d="M19 12H5M5 12l7-7M5 12l7 7"/>
+    </svg>
+    Volver a la Calculadora
+  </a>
+</nav>
+
+<!-- Página -->
+<div class="page">
+  <h1>📊 Conversión Masiva a UTM 17S</h1>
+  <p class="subtitle">
+    Carga un archivo Excel (.xlsx) o CSV con coordenadas en cualquier formato y obtén las columnas
+    <strong>X_UTM17S</strong> y <strong>Y_UTM17S</strong> listas para usar.
+  </p>
+
+  <!-- Formatos soportados -->
+  <div class="card">
+    <div class="card-title">
+      🗺️ Formatos de entrada soportados
+      <span class="badge">Detección automática</span>
+    </div>
+    <div class="formats-grid">
+      <div class="fmt-item">
+        <div class="fmt-label">Decimal con signo</div>
+        <div class="fmt-example">-1.38323 / -78.60763</div>
+      </div>
+      <div class="fmt-item">
+        <div class="fmt-label">Decimal entre paréntesis</div>
+        <div class="fmt-example">(-0.2201641, -78.5123274)</div>
+      </div>
+      <div class="fmt-item">
+        <div class="fmt-label">Par decimal coma o punto y coma</div>
+        <div class="fmt-example">-3.4814546, -80.2369046</div>
+      </div>
+      <div class="fmt-item">
+        <div class="fmt-label">DMS con hemisferio (texto)</div>
+        <div class="fmt-example">1° 22′ 60′′ Sur / 78° 36′ 28 O</div>
+      </div>
+      <div class="fmt-item">
+        <div class="fmt-label">UTM ya convertido (pasa directo)</div>
+        <div class="fmt-example">566282.14 m E, 9935660.93 m S</div>
+      </div>
+      <div class="fmt-item">
+        <div class="fmt-label">Formato X= Y= (lon/lat)</div>
+        <div class="fmt-example">X = 79°53′39″  Y = 2°10′44″</div>
+      </div>
+      <div class="fmt-item">
+        <div class="fmt-label">Etiquetas Latitud / Longitud + DMS</div>
+        <div class="fmt-example">Latitud 1°5′43″ S, Longitud 80°45′57″ O</div>
+      </div>
+      <div class="fmt-item">
+        <div class="fmt-label">Columnas separadas Lat / Lon</div>
+        <div class="fmt-example">Col A: -1.383  Col B: -78.607</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Plantilla -->
+  <div class="card">
+    <div class="card-title">📥 Plantilla de ejemplo</div>
+    <div class="template-info">
+      Tu archivo puede tener <b>cualquier número de columnas</b>. El módulo detecta automáticamente
+      cuáles son las columnas de coordenadas buscando encabezados como
+      <b>lat, lon, latitud, longitud, x, y, coordenadas, norte, este</b>, etc.<br><br>
+      Si no detecta columnas por nombre, usará las <b>dos primeras columnas</b> como Latitud y Longitud,
+      o la <b>primera columna</b> si contiene el par completo.<br><br>
+      También puedes seleccionar manualmente las columnas en la sección de configuración.
+    </div>
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn btn-ghost" onclick="descargarPlantilla()">
+        ⬇ Descargar plantilla de ejemplo (.xlsx)
+      </button>
+    </div>
+  </div>
+
+  <!-- Carga de archivo -->
+  <div class="card">
+    <div class="card-title">📂 Cargar archivo</div>
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" />
+      <div class="drop-icon">📁</div>
+      <div class="drop-text">Arrastra tu archivo aquí o haz clic</div>
+      <div class="drop-sub">Formatos aceptados: .xlsx, .xls, .csv</div>
+    </div>
+  </div>
+
+  <!-- Configuración de columnas (se muestra tras cargar) -->
+  <div class="card" id="configCard" style="display:none">
+    <div class="card-title">⚙️ Configuración de columnas</div>
+    <div class="config-row">
+      <div class="field">
+        <label>Columna de Latitud (o coordenada combinada)</label>
+        <select id="selColLat"></select>
+      </div>
+      <div class="field">
+        <label>Columna de Longitud <span style="color:var(--text-muted)">(dejar vacío si el par viene junto)</span></label>
+        <select id="selColLon"></select>
+      </div>
+      <div class="field">
+        <label>Fila de inicio de datos</label>
+        <input type="number" id="startRow" value="1" min="1" style="max-width:120px" />
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btnConvert" onclick="convertir()">
+        ▶ Convertir
+      </button>
+      <button class="btn btn-ghost" onclick="resetTodo()">✕ Limpiar</button>
+    </div>
+  </div>
+
+  <!-- Progreso -->
+  <div id="progressSection" style="display:none" class="card">
+    <div class="card-title">⏳ Procesando…</div>
+    <div class="progress-wrap">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      <div class="progress-label" id="progressLabel">Iniciando…</div>
+    </div>
+  </div>
+
+  <!-- Resultados -->
+  <div id="resultsSection" style="display:none" class="card">
+    <div class="card-title">✅ Resultados</div>
+
+    <div class="stats" id="statsRow"></div>
+
+    <div class="table-wrap">
+      <table id="resultTable">
+        <thead id="resultHead"></thead>
+        <tbody id="resultBody"></tbody>
+      </table>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-ok" onclick="exportarExcel()">
+        ⬇ Descargar Excel (.xlsx)
+      </button>
+      <button class="btn btn-ghost" onclick="exportarCSV()">
+        ⬇ Descargar CSV
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   PROYECCIONES — Zona 17S, 18S y WGS84
+═══════════════════════════════════════════════════════════════════════ */
+const WGS84   = '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs';
+const UTM17S  = '+proj=utm +zone=17 +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs';
+const UTM18S  = '+proj=utm +zone=18 +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs';
+
+function latLonToUTM17S(lat, lon) {
+  const coords = proj4(WGS84, UTM17S, [lon, lat]);
+  return { x: +coords[0].toFixed(2), y: +coords[1].toFixed(2) };
+}
+
+function utm18sToUTM17S(easting, northing) {
+  // UTM18S → WGS84 → UTM17S
+  const ll = proj4(UTM18S, WGS84, [easting, northing]);
+  const utm17 = proj4(WGS84, UTM17S, ll);
+  return { x: +utm17[0].toFixed(2), y: +utm17[1].toFixed(2) };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DETECCIÓN INTELIGENTE DEL TIPO DE COORDENADA
+   
+   Rangos válidos para Ecuador:
+   - Lat/Lon: Lat [-5.5, +2.0], Lon [-92.0, -75.0] (incluye Galápagos)
+   - UTM Northing Ecuador: [9,350,000 .. 10,200,000]
+   - UTM Easting: [100,000 .. 999,999]
+   - Zona 17S Easting típico: ~490,000 - 850,000 (costa/sierra/parte oriente)
+   - Zona 18S Easting típico: ~100,000 - 510,000 (oriente/amazonia)
+═══════════════════════════════════════════════════════════════════════ */
+
+// Verifica si un par (val1, val2) es un Northing+Easting UTM de Ecuador
+function detectarTipoParNumerico(val1, val2) {
+  const abs1 = Math.abs(val1);
+  const abs2 = Math.abs(val2);
+
+  // --- Caso 1: Lat/Lon geográficas ---
+  // Ambos valores con magnitud < 180
+  if (abs1 <= 90 && abs2 <= 180) {
+    // Validar que caigan dentro de Ecuador continental + Galápagos
+    const lat = val1, lon = val2;
+    if (lat >= -5.5 && lat <= 2.5 && lon >= -92.5 && lon <= -74.5) {
+      return { tipo: 'latlon', lat, lon };
+    }
+    // Tal vez están invertidos (lon, lat)
+    if (val2 >= -5.5 && val2 <= 2.5 && val1 >= -92.5 && val1 <= -74.5) {
+      return { tipo: 'latlon', lat: val2, lon: val1 };
+    }
+    // Fuera de Ecuador pero son claramente geográficas
+    if (abs1 <= 90 && abs2 <= 180) {
+      return { tipo: 'latlon', lat: val1, lon: val2 };
+    }
+  }
+
+  // --- Caso 2: UTM (ambos valores grandes) ---
+  // Un valor debe ser Easting (100k-1M) y otro Northing (9.3M-10.2M para Ecuador)
+  function esNorthing(v) { return v >= 9350000 && v <= 10200000; }
+  function esEasting(v)  { return v >= 100000 && v <= 999999; }
+
+  let easting = null, northing = null;
+
+  if (esEasting(abs1) && esNorthing(abs2)) {
+    easting = abs1; northing = abs2;
+  } else if (esEasting(abs2) && esNorthing(abs1)) {
+    easting = abs2; northing = abs1;
+  }
+
+  if (easting !== null && northing !== null) {
+    // Determinar zona UTM por el contexto:
+    // Zona 17S tiene su meridiano central en -81°, Easting 500000 = -81°
+    // Zona 18S tiene su meridiano central en -75°, Easting 500000 = -75°
+    // Si Easting > ~490000 podría ser Zona 17S
+    // Si Easting < ~510000 podría ser Zona 18S
+    // Para Ecuador: Zona 17 cubre la mayor parte del país
+    // Zona 18 cubre el oriente (amazonia), típicamente Easting < 500000
+    
+    // Heurística: verificar si la conversión produce un punto dentro de Ecuador
+    try {
+      // Probar primero como UTM17S
+      const ll17 = proj4(UTM17S, WGS84, [easting, northing]);
+      const lat17 = ll17[1], lon17 = ll17[0];
+      const ok17 = (lat17 >= -5.5 && lat17 <= 2.5 && lon17 >= -92.5 && lon17 <= -74.5);
+
+      // Probar como UTM18S
+      const ll18 = proj4(UTM18S, WGS84, [easting, northing]);
+      const lat18 = ll18[1], lon18 = ll18[0];
+      const ok18 = (lat18 >= -5.5 && lat18 <= 2.5 && lon18 >= -92.5 && lon18 <= -74.5);
+
+      if (ok17 && !ok18) return { tipo: 'utm17s', easting, northing };
+      if (ok18 && !ok17) return { tipo: 'utm18s', easting, northing };
+      if (ok17 && ok18) {
+        // Ambas zonas producen puntos válidos: usar la zona cuyo Easting
+        // esté más cerca de 500000 (punto medio de la zona)
+        // O simplemente: si Easting < 400000, más probable zona 18
+        return easting < 400000 ? { tipo: 'utm18s', easting, northing }
+                                : { tipo: 'utm17s', easting, northing };
+      }
+    } catch(e) {}
+
+    // Fallback: asumir zona 17S
+    return { tipo: 'utm17s', easting, northing };
+  }
+
+  return null; // No se pudo determinar
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PARSEO DE COORDENADAS — Soporta todos los formatos solicitados
+═══════════════════════════════════════════════════════════════════════ */
+function parsearCoordenada(raw) {
+  if (raw === null || raw === undefined || String(raw).trim() === '') return null;
+  const s = String(raw).trim();
+
+  // Descartar valores no numéricos conocidos
+  if (/^(S\/I|N\/A|None|null|nan|-|0)$/i.test(s)) return null;
+
+  // 1. UTM directo con etiquetas: "566282.14 m E, 9935660.93 m S"
+  const utmRx = /(\d+[\.,]\d+)\s*m?\s*[Ee][,\s]+(\d+[\.,]\d+)\s*m?\s*[Ss]/i;
+  const utmM = s.match(utmRx);
+  if (utmM) {
+    const easting  = parseFloat(utmM[1].replace(',','.'));
+    const northing = parseFloat(utmM[2].replace(',','.'));
+    return { tipo: 'utm17s', easting, northing };
+  }
+
+  // 2. Par decimal: "(-0.22, -78.51)" o "-3.48, -80.23" o "-1.38; -78.6"
+  const decPair = s.replace(/[()]/g,'').trim()
+    .match(/^([+-]?\d+[.,]\d+)\s*[,;]\s*([+-]?\d+[.,]\d+)$/);
+  if (decPair) {
+    const v1 = parseFloat(decPair[1].replace(',','.'));
+    const v2 = parseFloat(decPair[2].replace(',','.'));
+    // Usar detección inteligente
+    const det = detectarTipoParNumerico(v1, v2);
+    if (det) return det;
+    return { tipo:'latlon', lat: v1, lon: v2 };
+  }
+
+  // 3. "Latitud X°Y'Z'' [N/S] ... Longitud A°B'C'' [E/O/W]" (con etiquetas)
+  const lblDMS = s.match(
+    /[Ll]at(?:itud)?\s*[=:]?\s*(\d+)[°\s]+(\d+)[\'′\s]+(\d+(?:[.,]\d+)?)[""″\s]*([NSns]?)\s*[,y\s]+\s*[Ll]on(?:gitud)?\s*[=:]?\s*(\d+)[°\s]+(\d+)[\'′\s]+(\d+(?:[.,]\d+)?)[""″\s]*([EOWoew]?)/i
+  );
+  if (lblDMS) {
+    const [,ld,lm,ls,lh, od,om,os,oh] = lblDMS;
+    let lat = dms2dec(ld,lm,ls); if (/[Ss]/i.test(lh)) lat=-lat;
+    let lon = dms2dec(od,om,os); if (/[OoWw]/i.test(oh)) lon=-lon;
+    return { tipo:'latlon', lat, lon };
+  }
+
+  // 4. "X = 79°53′39″  Y = 2°10′44″" (lon primero, lat segundo)
+  const xyDMS = s.match(
+    /[Xx]\s*=\s*(\d+)[°\s]+(\d+)[\'′\s]+(\d+(?:[.,]\d+)?)[""″]?\s+[Yy]\s*=\s*(\d+)[°\s]+(\d+)[\'′\s]+(\d+(?:[.,]\d+)?)[""″]?/i
+  );
+  if (xyDMS) {
+    const [,xd,xm,xs, yd,ym,ys] = xyDMS;
+    return { tipo:'latlon', lat: -dms2dec(yd,ym,ys), lon: -dms2dec(xd,xm,xs) };
+  }
+
+  // 5. Dos bloques DMS genéricos (ej: "1° 22′ 60′′ sur / 78° 36′ 28 O")
+  const blocks = [...s.matchAll(/(\d+)[°\s]+(\d+)[\'′\s]+(\d+(?:[.,]\d+)?)[""″\s]*([NSnsUuOoWwEe]*)/g)];
+  if (blocks.length >= 2) {
+    const [b1, b2] = blocks;
+    let lat = dms2dec(b1[1],b1[2],b1[3]);
+    if (/[SsUu]/i.test(b1[4])) lat = -lat;
+    let lon = dms2dec(b2[1],b2[2],b2[3]);
+    if (/[OoWw]/i.test(b2[4])) lon = -lon;
+    return { tipo:'latlon', lat, lon };
+  }
+
+  // 6. Un solo valor decimal (se usará junto con otra columna)
+  const solo = s.replace(',','.').match(/^([+-]?\d+\.?\d*)$/);
+  if (solo) return { tipo:'solo', val: parseFloat(solo[1]) };
+
+  return null;
+}
+
+function dms2dec(d, m, s) {
+  return parseFloat(d) + parseFloat(m)/60 + parseFloat(String(s).replace(',','.'))/3600;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PROCESAR FILA — Detección inteligente del tipo de coordenada
+═══════════════════════════════════════════════════════════════════════ */
+function procesarFila(latRaw, lonRaw) {
+  try {
+    // Columnas separadas con valores numéricos
+    if (lonRaw !== null && lonRaw !== undefined && String(lonRaw).trim() !== '') {
+      const v1 = parseFloat(String(latRaw).replace(',','.'));
+      const v2 = parseFloat(String(lonRaw).replace(',','.'));
+      if (!isNaN(v1) && !isNaN(v2)) {
+        const det = detectarTipoParNumerico(v1, v2);
+        if (det) {
+          if (det.tipo === 'latlon') {
+            const r = latLonToUTM17S(det.lat, det.lon);
+            r.fuente = 'Lat/Lon → UTM17S'; return r;
+          }
+          if (det.tipo === 'utm17s') {
+            return { x: det.easting, y: det.northing, fuente: 'Ya UTM17S (sin cambio)' };
+          }
+          if (det.tipo === 'utm18s') {
+            const r = utm18sToUTM17S(det.easting, det.northing);
+            r.fuente = 'UTM18S → UTM17S'; return r;
+          }
+        }
+        if (Math.abs(v1) <= 90 && Math.abs(v2) <= 180) {
+          const r = latLonToUTM17S(v1, v2);
+          r.fuente = 'Lat/Lon → UTM17S'; return r;
+        }
+      }
+    }
+
+    const parsed = parsearCoordenada(latRaw);
+    if (!parsed) return null;
+
+    if (parsed.tipo === 'utm17s') {
+      return { x: parsed.easting, y: parsed.northing, fuente: 'Ya UTM17S (etiqueta)' };
+    }
+    if (parsed.tipo === 'utm18s') {
+      const r = utm18sToUTM17S(parsed.easting, parsed.northing);
+      r.fuente = 'UTM18S → UTM17S (etiqueta)'; return r;
+    }
+    if (parsed.tipo === 'latlon') {
+      const r = latLonToUTM17S(parsed.lat, parsed.lon);
+      r.fuente = 'Lat/Lon → UTM17S'; return r;
+    }
+
+    if (parsed.tipo === 'solo' && lonRaw !== null && lonRaw !== undefined) {
+      const v2 = parseFloat(String(lonRaw).replace(',','.'));
+      if (!isNaN(v2)) {
+        const det = detectarTipoParNumerico(parsed.val, v2);
+        if (det) {
+          if (det.tipo === 'latlon') {
+            const r = latLonToUTM17S(det.lat, det.lon);
+            r.fuente = 'Lat/Lon → UTM17S'; return r;
+          }
+          if (det.tipo === 'utm17s') {
+            return { x: det.easting, y: det.northing, fuente: 'Ya UTM17S (sin cambio)' };
+          }
+          if (det.tipo === 'utm18s') {
+            const r = utm18sToUTM17S(det.easting, det.northing);
+            r.fuente = 'UTM18S → UTM17S'; return r;
+          }
+        }
+        if (Math.abs(parsed.val) <= 90 && Math.abs(v2) <= 180) {
+          const r = latLonToUTM17S(parsed.val, v2);
+          r.fuente = 'Lat/Lon → UTM17S'; return r;
+        }
+      }
+    }
+  } catch(e) { console.warn('Error procesando fila:', e); }
+  return null;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ESTADO GLOBAL
+═══════════════════════════════════════════════════════════════════════ */
+let workbook = null;
+let sheetData = [];   // array de arrays (filas)
+let headers   = [];
+let results   = [];
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DROP ZONE / CARGA DE ARCHIVO
+═══════════════════════════════════════════════════════════════════════ */
+const dropZone  = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', ()=> dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) procesarArchivo(f);
+});
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) procesarArchivo(e.target.files[0]);
+});
+
+function procesarArchivo(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      workbook = XLSX.read(e.target.result, { type:'array', cellText:true, cellDates:true });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const raw   = XLSX.utils.sheet_to_json(sheet, { header:1, defval:'' });
+
+      if (!raw || raw.length < 2) { toast('El archivo parece vacío o sin datos.','err'); return; }
+
+      headers   = raw[0].map(String);
+      sheetData = raw.slice(1);
+
+      poblarSelectores();
+      document.getElementById('configCard').style.display = '';
+      toast(`Archivo cargado: ${sheetData.length} filas detectadas.`, 'ok');
+    } catch(err) {
+      toast('Error al leer el archivo: ' + err.message, 'err');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function poblarSelectores() {
+  const selLat = document.getElementById('selColLat');
+  const selLon = document.getElementById('selColLon');
+  selLat.innerHTML = '';
+  selLon.innerHTML = '<option value="">— (columna combinada / ninguna) —</option>';
+
+  headers.forEach((h, i) => {
+    const opt1 = new Option(`Col ${i+1}: ${h}`, i);
+    const opt2 = new Option(`Col ${i+1}: ${h}`, i);
+    selLat.appendChild(opt1);
+    selLon.appendChild(opt2);
+  });
+
+  // Auto-detectar columnas por nombre
+  const lk = ['lat','latitud','latitude','y_geo','y'];
+  const lok = ['lon','lng','longitud','longitude','x_geo','x'];
+
+  let autoLat = -1, autoLon = -1;
+  headers.forEach((h, i) => {
+    const hl = h.toLowerCase().trim();
+    if (autoLat < 0 && lk.some(k => hl === k || hl.startsWith(k))) autoLat = i;
+    if (autoLon < 0 && lok.some(k => hl === k || hl.startsWith(k))) autoLon = i;
+  });
+
+  // Si no hay coincidencia por nombre, usar primeras columnas
+  if (autoLat < 0) autoLat = 0;
+  if (autoLon < 0 && headers.length > 1) autoLon = 1;
+
+  selLat.value = autoLat;
+  selLon.value = autoLon >= 0 ? autoLon : '';
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   CONVERSIÓN MASIVA
+═══════════════════════════════════════════════════════════════════════ */
+async function convertir() {
+  if (!sheetData.length) return;
+
+  const iLat  = parseInt(document.getElementById('selColLat').value);
+  const lonV  = document.getElementById('selColLon').value;
+  const iLon  = lonV !== '' ? parseInt(lonV) : null;
+  const start = Math.max(0, parseInt(document.getElementById('startRow').value) - 1);
+
+  document.getElementById('progressSection').style.display = '';
+  document.getElementById('resultsSection').style.display  = 'none';
+  document.getElementById('btnConvert').disabled = true;
+
+  results = [];
+  const total = sheetData.length - start;
+  let ok = 0, err = 0;
+
+  for (let i = start; i < sheetData.length; i++) {
+    const row    = sheetData[i];
+    const latRaw = row[iLat] ?? '';
+    const lonRaw = iLon !== null ? (row[iLon] ?? '') : null;
+
+    const utm = procesarFila(latRaw, lonRaw);
+    results.push({ row, latRaw, lonRaw, utm });
+    if (utm) ok++; else err++;
+
+    // Actualizar progreso cada 50 filas o al final
+    if (i % 50 === 0 || i === sheetData.length - 1) {
+      const pct = Math.round(((i - start + 1) / total) * 100);
+      document.getElementById('progressFill').style.width = pct + '%';
+      document.getElementById('progressLabel').textContent =
+        `Procesando fila ${i - start + 1} de ${total}… (${ok} OK, ${err} sin convertir)`;
+      await new Promise(r => setTimeout(r, 0)); // yield para no bloquear UI
+    }
+  }
+
+  document.getElementById('progressSection').style.display = 'none';
+  document.getElementById('btnConvert').disabled = false;
+  renderResultados(ok, err);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   RENDER DE RESULTADOS
+═══════════════════════════════════════════════════════════════════════ */
+function renderResultados(ok, err) {
+  document.getElementById('resultsSection').style.display = '';
+
+  // Estadísticas
+  const statsRow = document.getElementById('statsRow');
+  statsRow.innerHTML = `
+    <div class="stat info"><div class="stat-val">${results.length}</div><div class="stat-lbl">Total filas</div></div>
+    <div class="stat ok"><div class="stat-val">${ok}</div><div class="stat-lbl">Convertidas ✓</div></div>
+    <div class="stat ${err>0?'err':'ok'}"><div class="stat-val">${err}</div><div class="stat-lbl">Sin convertir</div></div>
+    <div class="stat"><div class="stat-val">${Math.round(ok/results.length*100)}%</div><div class="stat-lbl">Éxito</div></div>
+  `;
+
+  // Cabecera tabla (columnas originales + X_UTM17S + Y_UTM17S + Tipo + Estado)
+  const head = document.getElementById('resultHead');
+  head.innerHTML = '<tr>' +
+    headers.map(h => `<th>${h}</th>`).join('') +
+    '<th>X_UTM17S (m E)</th><th>Y_UTM17S (m N)</th><th>Tipo Conversión</th><th>Estado</th>' +
+    '</tr>';
+
+  // Cuerpo (máx 200 filas en preview)
+  const body = document.getElementById('resultBody');
+  const preview = results.slice(0, 200);
+  body.innerHTML = preview.map(r => {
+    const cells = headers.map((_, i) => `<td class="src">${r.row[i] ?? ''}</td>`).join('');
+    if (r.utm) {
+      return `<tr>${cells}<td class="ok">${r.utm.x.toLocaleString('es-EC',{minimumFractionDigits:2})}</td>` +
+             `<td class="ok">${r.utm.y.toLocaleString('es-EC',{minimumFractionDigits:2})}</td>` +
+             `<td style="color:var(--accent);font-size:11px">${r.utm.fuente || '—'}</td>` +
+             `<td><span style="color:var(--ok)">✓</span></td></tr>`;
+    } else {
+      return `<tr>${cells}<td class="err">—</td><td class="err">—</td>` +
+             `<td class="err">—</td><td class="err">⚠ no reconocido</td></tr>`;
+    }
+  }).join('');
+
+  if (results.length > 200) {
+    const extra = document.createElement('tr');
+    extra.innerHTML = `<td colspan="${headers.length+4}" style="text-align:center;color:var(--text-muted);padding:12px">
+      … y ${results.length - 200} filas más (se incluyen en la descarga)
+    </td>`;
+    body.appendChild(extra);
+  }
+
+  toast(`Conversión completa: ${ok} de ${results.length} filas convertidas.`, ok === results.length ? 'ok' : 'info');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   EXPORTAR EXCEL
+═══════════════════════════════════════════════════════════════════════ */
+function exportarExcel() {
+  if (!results.length) return;
+
+  const wb2 = XLSX.utils.book_new();
+  const rows = [];
+
+  // Encabezados
+  rows.push([...headers, 'X_UTM17S (m E)', 'Y_UTM17S (m N)', 'Tipo_Conversion']);
+
+  results.forEach(r => {
+    const base = headers.map((_, i) => r.row[i] ?? '');
+    rows.push([...base, r.utm ? r.utm.x : '', r.utm ? r.utm.y : '', r.utm ? (r.utm.fuente || '') : 'No reconocido']);
+  });
+
+  const ws2 = XLSX.utils.aoa_to_sheet(rows);
+
+  // Ancho de columnas automático
+  const colWidths = rows[0].map((_, ci) => ({
+    wch: Math.min(30, Math.max(10, ...rows.map(r => String(r[ci]??'').length)))
+  }));
+  ws2['!cols'] = colWidths;
+
+  XLSX.utils.book_append_sheet(wb2, ws2, 'UTM_17S');
+  XLSX.writeFile(wb2, 'coordenadas_UTM17S.xlsx');
+  toast('Excel descargado con éxito.', 'ok');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   EXPORTAR CSV
+═══════════════════════════════════════════════════════════════════════ */
+function exportarCSV() {
+  if (!results.length) return;
+  const lineas = [];
+  lineas.push([...headers, 'X_UTM17S (m E)', 'Y_UTM17S (m N)', 'Tipo_Conversion'].join(','));
+  results.forEach(r => {
+    const base = headers.map((_, i) => `"${String(r.row[i]??'').replace(/"/g,'""')}"`);
+    lineas.push([...base, r.utm ? r.utm.x : '', r.utm ? r.utm.y : '', r.utm ? `"${r.utm.fuente||''}"` : '"No reconocido"'].join(','));
+  });
+  const blob = new Blob(['\uFEFF' + lineas.join('\n')], { type:'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'coordenadas_UTM17S.csv';
+  a.click();
+  toast('CSV descargado con éxito.', 'ok');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PLANTILLA DE EJEMPLO
+═══════════════════════════════════════════════════════════════════════ */
+function descargarPlantilla() {
+  const wb2 = XLSX.utils.book_new();
+  const data = [
+    ['ID', 'Nombre', 'Latitud', 'Longitud', 'Coordenada_Combinada', 'UTM_Combinado'],
+    [1, 'Quito Centro',       '-0.220164',  '-78.512327', '',                           ''],
+    [2, 'Guayaquil',          '-2.170998',  '-79.922359', '',                           ''],
+    [3, 'Cuenca',             '',           '',           '-2.9001285, -79.0058965',    ''],
+    [4, 'Latacunga',          '',           '',           '(-0.9304723, -78.6157093)',   ''],
+    [5, 'Ambato DMS',         '',           '',           '1° 14′ 30″ Sur, 78° 37′ 30″ O', ''],
+    [6, 'Punto UTM directo',  '',           '',           '',                           '766644.00 m E, 9758984.00 m S'],
+    [7, 'Loja',               '',           '',           'Latitud 3°59\'53" S Longitud 79°12\'16" O', ''],
+    [8, 'Santo Domingo',      '-0.252300',  '-79.170000', '',                           ''],
+    [9, 'Esmeraldas',         '0.951500',   '-79.652000', '',                           ''],
+    [10,'Manta',              '',           '',           '-0.9677, -80.7089',          ''],
+  ];
+  const ws2 = XLSX.utils.aoa_to_sheet(data);
+  ws2['!cols'] = [8,18,14,14,38,26].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb2, ws2, 'Plantilla');
+  XLSX.writeFile(wb2, 'plantilla_coordenadas.xlsx');
+  toast('Plantilla descargada.', 'info');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   RESET
+═══════════════════════════════════════════════════════════════════════ */
+function resetTodo() {
+  workbook = null; sheetData = []; headers = []; results = [];
+  document.getElementById('configCard').style.display    = 'none';
+  document.getElementById('progressSection').style.display = 'none';
+  document.getElementById('resultsSection').style.display  = 'none';
+  document.getElementById('fileInput').value = '';
+  toast('Listo para un nuevo archivo.', 'info');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   TOASTS
+═══════════════════════════════════════════════════════════════════════ */
+function toast(msg, tipo='info') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${tipo}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+</script>
+</body>
+</html>
